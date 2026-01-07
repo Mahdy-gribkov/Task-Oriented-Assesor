@@ -14,7 +14,8 @@
       "Bash(timeout 15 \"C:/Users/User/.platformio/penv/Scripts/pio.exe\" device monitor:*)",
       "Bash(/c/Users/User/.platformio/penv/Scripts/pio.exe run)",
       "Bash(/c/Users/User/.platformio/penv/Scripts/pio.exe run -t upload)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(/c/Users/User/.platformio/penv/Scripts/pio.exe run:*)"
     ]
   }
 }

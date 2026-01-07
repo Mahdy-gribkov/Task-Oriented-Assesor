@@ -12,6 +12,7 @@
 #include <M5Cardputer.h>
 #include "core/AssessorEngine.h"
 #include "ui/BootSequence.h"
+#include "ui/ScanSelector.h"
 #include "ui/TargetRadar.h"
 #include "ui/TargetDetail.h"
 #include "ui/MainMenu.h"
@@ -30,15 +31,17 @@ void handleKeyboardInput();
 // GLOBALS
 // =============================================================================
 
-static AssessorEngine* g_engine   = nullptr;
-static BootSequence*   g_boot     = nullptr;
-static TargetRadar*    g_radar    = nullptr;
-static TargetDetail*   g_detail   = nullptr;
-static MainMenu*       g_menu     = nullptr;
-static SettingsPanel*  g_settings = nullptr;
+static AssessorEngine* g_engine       = nullptr;
+static BootSequence*   g_boot         = nullptr;
+static ScanSelector*   g_scanSelector = nullptr;
+static TargetRadar*    g_radar        = nullptr;
+static TargetDetail*   g_detail       = nullptr;
+static MainMenu*       g_menu         = nullptr;
+static SettingsPanel*  g_settings     = nullptr;
 
 enum class AppState {
     BOOTING,
+    READY_TO_SCAN,   // Post-boot scan type selection
     SCANNING,
     RADAR,
     TARGET_DETAIL,
@@ -82,6 +85,7 @@ void setup() {
     yield();  // Feed watchdog
 
     g_boot = new BootSequence();
+    g_scanSelector = new ScanSelector();
     g_radar = new TargetRadar(*g_engine);
     g_menu = new MainMenu();
     g_settings = new SettingsPanel();
@@ -144,9 +148,35 @@ void loop() {
         case AppState::BOOTING:
             g_boot->tick();
             if (g_boot->isComplete()) {
-                // Don't auto-scan - let user trigger it
-                // This is less jarring and gives user control
-                g_state = AppState::RADAR;
+                // Transition to scan selection screen
+                g_scanSelector->show();
+                g_state = AppState::READY_TO_SCAN;
+            }
+            break;
+
+        case AppState::READY_TO_SCAN:
+            g_scanSelector->tick();
+            g_scanSelector->render();
+
+            // Check if user made a selection
+            if (g_scanSelector->hasSelection()) {
+                ScanChoice choice = g_scanSelector->getSelection();
+                g_scanSelector->clearSelection();
+                g_scanSelector->hide();
+
+                switch (choice) {
+                    case ScanChoice::WIFI_ONLY:
+                        g_engine->beginWiFiScan();
+                        break;
+                    case ScanChoice::BLE_ONLY:
+                        g_engine->beginBLEScan();
+                        break;
+                    case ScanChoice::COMBINED:
+                    default:
+                        g_engine->beginScan();
+                        break;
+                }
+                g_state = AppState::SCANNING;
             }
             break;
 
@@ -281,6 +311,22 @@ void handleKeyboardInput() {
             if (g_menu) {
                 g_menu->show();
             }
+            return;
+        }
+    }
+
+    // Scan selector input (READY_TO_SCAN state)
+    if (g_state == AppState::READY_TO_SCAN && g_scanSelector) {
+        if (M5Cardputer.Keyboard.isKeyPressed('r') || M5Cardputer.Keyboard.isKeyPressed('R')) {
+            g_scanSelector->onKeyR();
+            return;
+        }
+        if (M5Cardputer.Keyboard.isKeyPressed('b') || M5Cardputer.Keyboard.isKeyPressed('B')) {
+            g_scanSelector->onKeyB();
+            return;
+        }
+        if (M5Cardputer.Keyboard.isKeyPressed(KEY_ENTER) || M5Cardputer.Keyboard.isKeyPressed('e')) {
+            g_scanSelector->onKeyEnter();
             return;
         }
     }

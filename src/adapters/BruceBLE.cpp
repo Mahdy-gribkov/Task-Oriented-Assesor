@@ -146,15 +146,21 @@ bool BruceBLE::beginScan(uint32_t durationMs) {
 
 void BruceBLE::stopScan() {
     if (m_state == BLEAdapterState::SCANNING) {
-        m_scanner->stop();
-        m_state = BLEAdapterState::IDLE;
-
-        if (m_onScanComplete) {
-            m_onScanComplete(m_devices.size());
+        // Force stop scanner
+        if (m_scanner) {
+            m_scanner->stop();
         }
+
+        // Always transition state immediately
+        m_state = BLEAdapterState::IDLE;
 
         if (Serial) {
             Serial.printf("[BLE] Scan stopped: %d devices\n", m_devices.size());
+        }
+
+        // Fire callback last (in case it triggers new scan)
+        if (m_onScanComplete) {
+            m_onScanComplete(m_devices.size());
         }
     }
 }
@@ -181,8 +187,24 @@ void BruceBLE::onScanComplete(BLEScanCompleteCallback cb) {
 
 void BruceBLE::tickScan() {
     // Check for timeout
-    if (m_scanDurationMs > 0 && (millis() - m_scanStartMs) >= m_scanDurationMs) {
-        stopScan();
+    uint32_t elapsed = millis() - m_scanStartMs;
+    if (m_scanDurationMs > 0 && elapsed >= m_scanDurationMs) {
+        // Force stop the scanner - NimBLE doesn't always fire completion callback
+        if (m_scanner) {
+            m_scanner->stop();
+        }
+
+        // Force state transition regardless of scanner response
+        m_state = BLEAdapterState::IDLE;
+
+        if (Serial) {
+            Serial.printf("[BLE] Scan timeout after %ums: %d devices\n", elapsed, m_devices.size());
+        }
+
+        // Fire completion callback
+        if (m_onScanComplete) {
+            m_onScanComplete(m_devices.size());
+        }
     }
 }
 
