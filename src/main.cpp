@@ -13,6 +13,7 @@
 #include "core/AssessorEngine.h"
 #include "ui/BootSequence.h"
 #include "ui/TargetRadar.h"
+#include "ui/TargetDetail.h"
 #include "ui/Theme.h"
 
 using namespace Assessor;
@@ -24,6 +25,7 @@ using namespace Assessor;
 static AssessorEngine* g_engine = nullptr;
 static BootSequence*   g_boot   = nullptr;
 static TargetRadar*    g_radar  = nullptr;
+static TargetDetail*   g_detail = nullptr;
 
 enum class AppState {
     BOOTING,
@@ -121,22 +123,73 @@ void loop() {
 
             // Handle target selection
             if (g_radar->hasSelection()) {
-                // TODO: Transition to TARGET_DETAIL state
-                // const Target* selected = g_radar->getSelectedTarget();
+                const Target* selected = g_radar->getSelectedTarget();
+                if (selected) {
+                    // Clean up any previous detail view
+                    if (g_detail) {
+                        delete g_detail;
+                    }
+                    g_detail = new TargetDetail(*g_engine, *selected);
+                    g_radar->clearSelection();
+                    g_state = AppState::TARGET_DETAIL;
+                }
             }
             break;
 
         case AppState::TARGET_DETAIL:
-            // TODO: Implement target detail view
+            g_engine->tick();
+            if (g_detail) {
+                g_detail->tick();
+                g_detail->render();
+
+                // Check if user wants to go back
+                if (g_detail->wantsBack()) {
+                    delete g_detail;
+                    g_detail = nullptr;
+                    g_state = AppState::RADAR;
+                }
+                // Check if action was confirmed
+                else if (g_detail->actionConfirmed()) {
+                    ActionType action = g_detail->getConfirmedAction();
+                    g_detail->clearActionConfirmation();
+                    g_engine->executeAction(action, g_detail->getTarget());
+                    g_state = AppState::ATTACKING;
+                }
+            }
             break;
 
         case AppState::ATTACKING:
             g_engine->tick();
-            // TODO: Show attack progress
+            if (g_detail) {
+                g_detail->tick();
+                g_detail->render();
+
+                // Check if attack finished
+                if (!g_engine->isActionActive()) {
+                    g_state = AppState::TARGET_DETAIL;
+                }
+                // Check if user cancelled
+                if (g_detail->wantsBack()) {
+                    g_engine->stopAction();
+                    g_state = AppState::TARGET_DETAIL;
+                }
+            }
             break;
 
         case AppState::ERROR:
-            // TODO: Show error screen with recovery options
+            // Show error screen
+            M5.Display.fillScreen(Theme::COLOR_BACKGROUND);
+            M5.Display.setTextColor(Theme::COLOR_DANGER);
+            M5.Display.setTextDatum(MC_DATUM);
+            M5.Display.drawString("ERROR", Theme::SCREEN_WIDTH / 2, Theme::SCREEN_HEIGHT / 2 - 10);
+            M5.Display.setTextColor(Theme::COLOR_TEXT_SECONDARY);
+            M5.Display.drawString("Press any button to restart", Theme::SCREEN_WIDTH / 2, Theme::SCREEN_HEIGHT / 2 + 10);
+
+            // Any button press restarts scanning
+            if (M5.BtnA.wasPressed() || M5.BtnB.wasPressed() || M5.BtnC.wasPressed()) {
+                g_engine->beginScan();
+                g_state = AppState::SCANNING;
+            }
             break;
     }
 
