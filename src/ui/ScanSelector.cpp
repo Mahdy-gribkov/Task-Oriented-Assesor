@@ -1,6 +1,6 @@
 /**
  * @file ScanSelector.cpp
- * @brief Post-boot scan type selection screen
+ * @brief Post-boot scan type selection screen - ORANGE THEMED
  */
 
 #include "ScanSelector.h"
@@ -61,62 +61,72 @@ void ScanSelector::render() {
     m_lastRenderMs = now;
     m_needsRedraw = false;
 
+    // Dark background
     m_canvas->fillScreen(Theme::COLOR_BACKGROUND);
 
-    // Title
-    m_canvas->setTextSize(1);
+    // Orange accent bar at top
+    m_canvas->fillRect(0, 0, Theme::SCREEN_WIDTH, 3, Theme::COLOR_ACCENT);
+
+    // Title - BIG and ORANGE
+    m_canvas->setTextSize(2);
     m_canvas->setTextColor(Theme::COLOR_ACCENT);
     m_canvas->setTextDatum(TC_DATUM);
-    m_canvas->drawString("THE ASSESSOR", Theme::SCREEN_WIDTH / 2, 8);
+    m_canvas->drawString("THE ASSESSOR", Theme::SCREEN_WIDTH / 2, 12);
 
-    // Subtitle with animation
+    // Subtitle with blinking cursor
+    m_canvas->setTextSize(1);
     m_canvas->setTextColor(Theme::COLOR_TEXT_SECONDARY);
     const char* subtitle = (m_animFrame % 2 == 0) ? "Target First. Always." : "Target First. Always._";
-    m_canvas->drawString(subtitle, Theme::SCREEN_WIDTH / 2, 22);
+    m_canvas->drawString(subtitle, Theme::SCREEN_WIDTH / 2, 32);
 
-    // Separator line
-    m_canvas->drawFastHLine(20, 36, Theme::SCREEN_WIDTH - 40, Theme::COLOR_SURFACE_RAISED);
+    // Orange separator line
+    m_canvas->drawFastHLine(30, 44, Theme::SCREEN_WIDTH - 60, Theme::COLOR_ACCENT);
 
-    // Scan options
-    int16_t optionY = 48;
-    int16_t optionSpacing = 22;
+    // Scan options - ALL ORANGE THEMED
+    int16_t optionY = 54;
+    int16_t optionSpacing = 24;
 
-    drawOption(optionY, "R", "Scan WiFi", Theme::COLOR_SUCCESS);
+    // WiFi option
+    drawOption(optionY, "R", "Scan WiFi Networks", Theme::COLOR_ACCENT);
     optionY += optionSpacing;
 
-    drawOption(optionY, "B", "Scan Bluetooth", Theme::COLOR_TYPE_BLE);
+    // BLE option
+    drawOption(optionY, "B", "Scan Bluetooth", Theme::COLOR_ACCENT);
     optionY += optionSpacing;
 
-    drawOption(optionY, "ENT", "Scan Both", Theme::COLOR_WARNING);
+    // Both option - highlighted differently
+    drawOption(optionY, "OK", "Scan Everything", Theme::COLOR_ACCENT);
 
-    // Footer hint
+    // Footer with orange accent
+    m_canvas->fillRect(0, Theme::SCREEN_HEIGHT - 12, Theme::SCREEN_WIDTH, 12, Theme::COLOR_SURFACE);
     m_canvas->setTextSize(1);
-    m_canvas->setTextColor(Theme::COLOR_TEXT_MUTED);
-    m_canvas->setTextDatum(BC_DATUM);
-    m_canvas->drawString("[M] Menu", Theme::SCREEN_WIDTH / 2, Theme::SCREEN_HEIGHT - 3);
+    m_canvas->setTextColor(Theme::COLOR_ACCENT);
+    m_canvas->setTextDatum(MC_DATUM);
+    m_canvas->drawString("[M] Menu", Theme::SCREEN_WIDTH / 2, Theme::SCREEN_HEIGHT - 6);
 
     m_canvas->pushSprite(0, 0);
 }
 
 void ScanSelector::drawOption(int16_t y, const char* key, const char* label, uint16_t keyColor) {
-    // Key box
-    int16_t keyBoxX = 30;
-    int16_t keyBoxW = (strlen(key) > 2) ? 28 : 16;
-    int16_t keyBoxH = 14;
+    // Key box - orange border
+    int16_t keyBoxX = 20;
+    int16_t keyBoxW = (strlen(key) > 1) ? 24 : 16;
+    int16_t keyBoxH = 16;
 
-    m_canvas->fillRoundRect(keyBoxX, y, keyBoxW, keyBoxH, 2, Theme::COLOR_SURFACE);
-    m_canvas->drawRoundRect(keyBoxX, y, keyBoxW, keyBoxH, 2, keyColor);
+    // Orange bordered box
+    m_canvas->fillRoundRect(keyBoxX, y, keyBoxW, keyBoxH, 3, Theme::COLOR_SURFACE);
+    m_canvas->drawRoundRect(keyBoxX, y, keyBoxW, keyBoxH, 3, keyColor);
 
-    // Key text
+    // Key text in orange
     m_canvas->setTextSize(1);
     m_canvas->setTextColor(keyColor);
     m_canvas->setTextDatum(MC_DATUM);
     m_canvas->drawString(key, keyBoxX + keyBoxW / 2, y + keyBoxH / 2);
 
-    // Label
+    // Label in white
     m_canvas->setTextColor(Theme::COLOR_TEXT_PRIMARY);
     m_canvas->setTextDatum(ML_DATUM);
-    m_canvas->drawString(label, keyBoxX + keyBoxW + 10, y + keyBoxH / 2);
+    m_canvas->drawString(label, keyBoxX + keyBoxW + 12, y + keyBoxH / 2);
 }
 
 bool ScanSelector::hasSelection() const {

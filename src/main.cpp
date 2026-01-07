@@ -51,6 +51,8 @@ enum class AppState {
 };
 
 static AppState g_state = AppState::BOOTING;
+static uint32_t g_lastKeyMs = 0;  // Debounce
+static constexpr uint32_t KEY_DEBOUNCE_MS = 150;
 
 // =============================================================================
 // SETUP
@@ -279,9 +281,17 @@ void loop() {
 // =============================================================================
 
 void handleKeyboardInput() {
-    if (!M5Cardputer.Keyboard.isChange()) {
-        return;  // No keyboard state change
+    // Always check for pressed keys - isChange() can be unreliable
+    if (!M5Cardputer.Keyboard.isPressed()) {
+        return;  // No keys pressed
     }
+
+    // Debounce - prevent rapid-fire key events
+    uint32_t now = millis();
+    if (now - g_lastKeyMs < KEY_DEBOUNCE_MS) {
+        return;
+    }
+    g_lastKeyMs = now;
 
     // Handle menu input first (if visible)
     if (g_menu && g_menu->isVisible()) {
