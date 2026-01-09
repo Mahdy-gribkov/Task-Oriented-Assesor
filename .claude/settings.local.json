@@ -23,7 +23,8 @@
       "Bash(cmd /c \"where pio\")",
       "Bash(cmd /c \"C:\\\\Users\\\\User\\\\.platformio\\\\penv\\\\Scripts\\\\pio.exe run\")",
       "Bash(powershell -Command:*)",
-      "Bash(~/.platformio/penv/Scripts/pio.exe run:*)"
+      "Bash(~/.platformio/penv/Scripts/pio.exe run:*)",
+      "Bash(gh:*)"
     ]
   }
 }

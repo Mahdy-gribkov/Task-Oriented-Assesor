@@ -17,6 +17,7 @@
 #include "ui/TargetDetail.h"
 #include "ui/MainMenu.h"
 #include "ui/SettingsPanel.h"
+#include "ui/AboutPanel.h"
 #include "ui/Theme.h"
 
 using namespace Assessor;
@@ -38,6 +39,7 @@ static TargetRadar*    g_radar        = nullptr;
 static TargetDetail*   g_detail       = nullptr;
 static MainMenu*       g_menu         = nullptr;
 static SettingsPanel*  g_settings     = nullptr;
+static AboutPanel*     g_about        = nullptr;
 
 enum class AppState {
     BOOTING,
@@ -47,12 +49,14 @@ enum class AppState {
     TARGET_DETAIL,
     ATTACKING,
     SETTINGS,
+    ABOUT,           // About dialog
     ERROR
 };
 
 static AppState g_state = AppState::BOOTING;
 static uint32_t g_lastKeyMs = 0;  // Debounce
 static constexpr uint32_t KEY_DEBOUNCE_MS = 150;
+static bool g_consumeNextInput = false;  // Prevents key "bleed-through" after menu actions
 
 // =============================================================================
 // SETUP
@@ -91,6 +95,7 @@ void setup() {
     g_radar = new TargetRadar(*g_engine);
     g_menu = new MainMenu();
     g_settings = new SettingsPanel();
+    g_about = new AboutPanel();
 
     // Start boot sequence
     g_boot->begin();
@@ -114,6 +119,7 @@ void loop() {
 
     // Check for pending menu action FIRST (even if menu closed)
     if (g_menu && g_menu->hasAction()) {
+        g_consumeNextInput = true;  // Prevent key "bleed-through" to next state
         MenuAction action = g_menu->getAction();
         switch (action) {
             case MenuAction::RESCAN:
@@ -131,7 +137,10 @@ void loop() {
                 }
                 break;
             case MenuAction::ABOUT:
-                // TODO: Show about
+                if (g_about) {
+                    g_about->show();
+                    g_state = AppState::ABOUT;
+                }
                 break;
             case MenuAction::BACK:
             case MenuAction::NONE:
@@ -274,6 +283,22 @@ void loop() {
             }
             break;
 
+        case AppState::ABOUT:
+            if (g_about) {
+                g_about->tick();
+                g_about->render();
+
+                // Any key closes about dialog
+                if (g_about->wantsBack()) {
+                    g_about->clearBack();
+                    g_about->hide();
+                    g_state = AppState::RADAR;
+                }
+            } else {
+                g_state = AppState::RADAR;
+            }
+            break;
+
         case AppState::ERROR:
             // Show error screen
             M5Cardputer.Display.fillScreen(Theme::COLOR_BACKGROUND);
@@ -300,6 +325,13 @@ void loop() {
 // =============================================================================
 
 void handleKeyboardInput() {
+    // Skip input processing if we just processed a menu action
+    // This prevents the same ENTER keypress from triggering radar selection
+    if (g_consumeNextInput) {
+        g_consumeNextInput = false;
+        return;
+    }
+
     // Always check for pressed keys - isChange() can be unreliable
     if (!M5Cardputer.Keyboard.isPressed()) {
         return;  // No keys pressed
@@ -378,6 +410,17 @@ void handleKeyboardInput() {
 
     // Navigation in RADAR state
     if (g_state == AppState::RADAR) {
+        // Handle 5GHz warning popup if showing
+        if (g_radar->isShowingWarning()) {
+            if (M5Cardputer.Keyboard.isKeyPressed(KEY_ENTER) || M5Cardputer.Keyboard.isKeyPressed('e')) {
+                g_radar->confirmWarning();  // User wants to view info anyway
+            }
+            if (M5Cardputer.Keyboard.isKeyPressed('q') || M5Cardputer.Keyboard.isKeyPressed(KEY_BACKSPACE)) {
+                g_radar->cancelWarning();  // User cancelled
+            }
+            return;  // Don't process other radar input while popup is showing
+        }
+
         // Up navigation: ';' or ',' (above . and / on cardputer keyboard)
         if (M5Cardputer.Keyboard.isKeyPressed(';') || M5Cardputer.Keyboard.isKeyPressed(',')) {
             g_radar->navigateUp();

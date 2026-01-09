@@ -21,6 +21,8 @@ TargetRadar::TargetRadar(AssessorEngine& engine)
     , m_lastRefreshMs(0)
     , m_lastRenderMs(0)
     , m_needsRedraw(true)
+    , m_show5GHzWarning(false)
+    , m_pending5GHzTarget()
     , m_canvas(nullptr)
 {
     // Default filter: show everything
@@ -149,6 +151,11 @@ void TargetRadar::render() {
     m_canvas->setTextColor(Theme::COLOR_TEXT_MUTED);
     m_canvas->setTextDatum(BC_DATUM);
     m_canvas->drawString("[;,] Up  [./] Down  [Enter] Select", Theme::SCREEN_WIDTH / 2, Theme::SCREEN_HEIGHT - 2);
+
+    // Render 5GHz warning popup if active (on top of everything)
+    if (m_show5GHzWarning) {
+        render5GHzWarning();
+    }
 
     // Push sprite to display in one operation (no flicker!)
     m_canvas->pushSprite(0, 0);
@@ -389,8 +396,44 @@ void TargetRadar::navigateDown() {
 
 void TargetRadar::select() {
     if (m_highlightIndex >= 0 && m_highlightIndex < (int)m_targets.size()) {
-        m_selectedTarget = m_targets[m_highlightIndex];  // Copy the target
+        const Target& target = m_targets[m_highlightIndex];
+
+        // Check if this is a 5GHz WiFi network (channel > 14)
+        // BLE devices are fine, only WiFi APs on 5GHz have limitations
+        bool is5GHzWiFi = (target.type == TargetType::ACCESS_POINT && target.channel > 14);
+
+        if (is5GHzWiFi) {
+            // Show warning popup instead of direct selection
+            m_pending5GHzTarget = target;
+            m_show5GHzWarning = true;
+            m_needsRedraw = true;
+        } else {
+            // Normal selection
+            m_selectedTarget = target;
+            m_hasSelection = true;
+        }
+    }
+}
+
+bool TargetRadar::isShowingWarning() const {
+    return m_show5GHzWarning;
+}
+
+void TargetRadar::confirmWarning() {
+    if (m_show5GHzWarning) {
+        // User confirmed they want to view 5GHz network info
+        m_selectedTarget = m_pending5GHzTarget;
         m_hasSelection = true;
+        m_show5GHzWarning = false;
+        m_needsRedraw = true;
+    }
+}
+
+void TargetRadar::cancelWarning() {
+    if (m_show5GHzWarning) {
+        // User cancelled - go back to radar
+        m_show5GHzWarning = false;
+        m_needsRedraw = true;
     }
 }
 
@@ -499,6 +542,47 @@ void TargetRadar::ensureHighlightVisible() {
     } else if (m_highlightIndex >= m_scrollOffset + VISIBLE_ITEMS) {
         m_scrollOffset = m_highlightIndex - VISIBLE_ITEMS + 1;
     }
+}
+
+void TargetRadar::render5GHzWarning() {
+    // Semi-transparent overlay effect (darken background)
+    // Draw a filled rectangle with partial alpha effect
+    int16_t centerX = Theme::SCREEN_WIDTH / 2;
+    int16_t centerY = Theme::SCREEN_HEIGHT / 2;
+
+    // Warning box dimensions
+    int16_t boxW = 220;
+    int16_t boxH = 90;
+    int16_t boxX = (Theme::SCREEN_WIDTH - boxW) / 2;
+    int16_t boxY = (Theme::SCREEN_HEIGHT - boxH) / 2;
+
+    // Draw box background and border
+    m_canvas->fillRoundRect(boxX, boxY, boxW, boxH, 4, Theme::COLOR_SURFACE);
+    m_canvas->drawRoundRect(boxX, boxY, boxW, boxH, 4, Theme::COLOR_WARNING);
+
+    // Title
+    m_canvas->setTextSize(1);
+    m_canvas->setTextDatum(MC_DATUM);
+    m_canvas->setTextColor(Theme::COLOR_WARNING);
+    m_canvas->drawString("5GHz LIMITATION", centerX, centerY - 32);
+
+    // Network name
+    m_canvas->setTextColor(Theme::COLOR_TEXT_PRIMARY);
+    char ssidStr[24];
+    strncpy(ssidStr, m_pending5GHzTarget.ssid, 20);
+    ssidStr[20] = '\0';
+    m_canvas->drawString(ssidStr, centerX, centerY - 18);
+
+    // Explanation (two lines)
+    m_canvas->setTextColor(Theme::COLOR_TEXT_SECONDARY);
+    m_canvas->drawString("ESP32 cannot attack 5GHz bands.", centerX, centerY - 2);
+    m_canvas->drawString("Info view only - no attacks.", centerX, centerY + 10);
+
+    // Action buttons
+    m_canvas->setTextColor(Theme::COLOR_ACCENT);
+    m_canvas->drawString("[ENTER] View Info", centerX - 50, centerY + 30);
+    m_canvas->setTextColor(Theme::COLOR_TEXT_MUTED);
+    m_canvas->drawString("[Q] Cancel", centerX + 60, centerY + 30);
 }
 
 } // namespace Assessor

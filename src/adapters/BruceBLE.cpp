@@ -51,21 +51,39 @@ bool BruceBLE::init() {
         Serial.println("[BLE] Initializing...");
     }
 
+    uint32_t initStart = millis();
+    const uint32_t BLE_INIT_TIMEOUT_MS = 3000;
+
     // Check if NimBLE is already initialized
     if (!NimBLEDevice::getInitialized()) {
         NimBLEDevice::init("Velora");
+        yield();  // Feed watchdog after NimBLE init
     } else {
         if (Serial) {
             Serial.println("[BLE] Already initialized, reusing");
         }
     }
 
+    // Timeout check
+    if (millis() - initStart > BLE_INIT_TIMEOUT_MS) {
+        if (Serial) Serial.println("[BLE] Init timeout after NimBLE init");
+        return false;
+    }
+
     // Get scanner
     m_scanner = NimBLEDevice::getScan();
+    yield();  // Feed watchdog after getScan
+
     if (!m_scanner) {
         if (Serial) {
             Serial.println("[BLE] Scanner null!");
         }
+        return false;
+    }
+
+    // Timeout check
+    if (millis() - initStart > BLE_INIT_TIMEOUT_MS) {
+        if (Serial) Serial.println("[BLE] Init timeout after getScan");
         return false;
     }
 
@@ -77,13 +95,16 @@ bool BruceBLE::init() {
     m_scanner->setActiveScan(true);
     m_scanner->setInterval(100);
     m_scanner->setWindow(99);
+    yield();  // Feed watchdog after callback setup
 
     m_advertising = NimBLEDevice::getAdvertising();
+    yield();  // Feed watchdog after getAdvertising
+
     m_initialized = true;
     m_state = BLEAdapterState::IDLE;
 
     if (Serial) {
-        Serial.println("[BLE] Ready");
+        Serial.printf("[BLE] Ready (init took %ums)\n", millis() - initStart);
     }
 
     return true;
@@ -135,7 +156,8 @@ bool BruceBLE::beginScan(uint32_t durationMs) {
     // Stop any existing scan first
     if (m_scanner && m_scanner->isScanning()) {
         m_scanner->stop();
-        delay(50);
+        // Watchdog-safe delay
+        for (int i = 0; i < 5; i++) { yield(); delay(10); }
     }
 
     stopAttack();

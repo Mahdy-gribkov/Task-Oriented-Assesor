@@ -107,6 +107,21 @@ public:
     void select();
 
     /**
+     * @brief Check if 5GHz warning popup is showing
+     */
+    bool isShowingWarning() const;
+
+    /**
+     * @brief Confirm 5GHz warning (user pressed ENTER to continue)
+     */
+    void confirmWarning();
+
+    /**
+     * @brief Cancel 5GHz warning (user pressed Q to go back)
+     */
+    void cancelWarning();
+
+    /**
      * @brief Scroll to top of list
      */
     void scrollToTop();
@@ -162,6 +177,10 @@ private:
     uint32_t             m_lastRenderMs;    // For frame limiting
     bool                 m_needsRedraw;     // Dirty flag
 
+    // 5GHz warning popup state
+    bool                 m_show5GHzWarning; // Show warning popup for 5GHz limitation
+    Target               m_pending5GHzTarget; // Target waiting for user confirmation
+
     // Double buffer sprite
     M5Canvas*            m_canvas;
 
@@ -179,6 +198,7 @@ private:
     void renderTargetItemToCanvas(const Target& target, int y, bool highlighted);
     void renderEmptyState();
     void renderScrollIndicator();
+    void render5GHzWarning();  // Warning popup for 5GHz networks
 
     // Item rendering details
     void drawSignalIndicator(int x, int y, int8_t rssi);

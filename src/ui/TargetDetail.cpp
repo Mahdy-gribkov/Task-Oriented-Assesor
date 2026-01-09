@@ -318,8 +318,16 @@ void TargetDetail::renderInfo() {
         m_canvas->setTextColor(Theme::COLOR_ACCENT);
         m_canvas->drawString("[ENTER] View Actions", Theme::SCREEN_WIDTH / 2, y + 8);
     } else {
-        m_canvas->setTextColor(Theme::COLOR_TEXT_MUTED);
-        m_canvas->drawString("No actions available", Theme::SCREEN_WIDTH / 2, y + 8);
+        // Check if this is a 5GHz network (explains why no actions)
+        if (m_target.channel > 14 && m_target.type == TargetType::ACCESS_POINT) {
+            m_canvas->setTextColor(Theme::COLOR_WARNING);
+            m_canvas->drawString("5GHz - Info Only", Theme::SCREEN_WIDTH / 2, y + 8);
+            m_canvas->setTextColor(Theme::COLOR_TEXT_MUTED);
+            m_canvas->drawString("ESP32 cannot attack 5GHz", Theme::SCREEN_WIDTH / 2, y + 20);
+        } else {
+            m_canvas->setTextColor(Theme::COLOR_TEXT_MUTED);
+            m_canvas->drawString("No actions available", Theme::SCREEN_WIDTH / 2, y + 8);
+        }
     }
 
     // Footer hint

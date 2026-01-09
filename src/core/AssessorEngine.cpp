@@ -12,6 +12,18 @@
 namespace Assessor {
 
 // =============================================================================
+// HELPER: Watchdog-safe delay
+// =============================================================================
+
+static void yieldDelay(uint32_t ms) {
+    uint32_t start = millis();
+    while (millis() - start < ms) {
+        yield();
+        delay(1);
+    }
+}
+
+// =============================================================================
 // SINGLETON
 // =============================================================================
 
@@ -394,13 +406,15 @@ void AssessorEngine::processScanResults(int count) {
         }
 
         // Shut down WiFi before starting BLE (ESP32 shares radio)
+        // Use yieldDelay to prevent watchdog timeout
         WiFi.disconnect(true);
+        yield();
         WiFi.mode(WIFI_OFF);
-        delay(200);  // Brief transition delay
+        yieldDelay(200);  // Watchdog-safe transition delay
 
         BruceBLE& ble = BruceBLE::getInstance();
         ble.shutdown();
-        delay(100);
+        yieldDelay(100);  // Watchdog-safe delay
 
         // Try BLE init with retries
         bool bleInitOk = false;
@@ -408,6 +422,7 @@ void AssessorEngine::processScanResults(int count) {
             if (Serial) {
                 Serial.printf("[BLE] Init attempt %d...\n", attempt + 1);
             }
+            yield();  // Feed watchdog before each attempt
 
             bleInitOk = ble.init();
             if (bleInitOk) {
@@ -420,7 +435,7 @@ void AssessorEngine::processScanResults(int count) {
             if (Serial) {
                 Serial.printf("[BLE] Init attempt %d failed\n", attempt + 1);
             }
-            delay(100);  // Wait before retry
+            yieldDelay(100);  // Watchdog-safe wait before retry
         }
 
         if (!bleInitOk) {

@@ -1,9 +1,9 @@
 # Progress Tracker
-> **Last Updated:** Jan 9, 2026
+> **Last Updated:** Jan 9, 2026 (Session 3)
 
 ## 1. Context Summary
 
-**Phase 2 In Progress.** Critical bug fixes applied, Evil Portal implemented, firmware uploaded to Cardputer for testing.
+**Phase 2 Complete.** Comprehensive bug fixes applied, 5GHz UX improved, About dialog added, firmware uploaded to Cardputer for testing.
 
 ---
 
@@ -56,7 +56,7 @@
 
 ## 4. Phase 2: Bug Fixes & Features (IN PROGRESS)
 
-### Critical Bug Fixes (Jan 9, 2026)
+### Critical Bug Fixes (Jan 9, 2026 - Session 2)
 - [x] **Fixed blocking WiFi scan** - Changed from synchronous to async scanning
   - Root cause: `WiFi.scanNetworks(false,...)` blocked for 3-5 seconds causing watchdog reset
   - Fix: Changed to `WiFi.scanNetworks(true,...)` with completion checking in `tick()`
@@ -64,7 +64,15 @@
 - [x] **Removed excessive yield() spam** - Cleaned up overzealous watchdog feeding
 - [x] **Fixed Evil Twin mode switch** - Reduced blocking delays
 
-### New Features (Jan 9, 2026)
+### Comprehensive Bug Fixes (Jan 9, 2026 - Session 3)
+- [x] **Added yieldDelay() helper** - Watchdog-safe delay function for blocking transitions
+- [x] **Fixed BLE/Combined scan freezes** - Added yield() calls throughout BruceBLE::init() with timeout
+- [x] **Fixed menu action misfiring** - Added g_consumeNextInput flag to prevent key "bleed-through"
+- [x] **Added 5GHz warning popup** - Shows warning before entering 5GHz network detail (ESP32 limitation)
+- [x] **Improved 5GHz messaging** - TargetDetail now shows "5GHz - Info Only" with explanation
+- [x] **Implemented About dialog** - New AboutPanel.h/cpp with version info and credits
+
+### New Features (Jan 9, 2026 - Session 2)
 - [x] **Implemented Evil Portal** - Full captive portal with credential capture
   - EvilPortal.h/cpp with DNS spoofing and web server
   - Generic WiFi login template
@@ -73,9 +81,11 @@
   - Live status display (client count, captured credentials)
 
 ### Hardware Testing
-- [x] Firmware uploaded to Cardputer (Jan 9, 2026)
+- [x] Firmware uploaded to Cardputer (Jan 9, 2026 - Session 2 & 3)
 - [ ] Verify WiFi scanning works without crash
 - [ ] Verify BLE scanning works after WiFi
+- [ ] Verify 5GHz warning popup works
+- [ ] Verify About dialog works
 - [ ] Test deauth attack
 - [ ] Test beacon flood
 - [ ] Test Evil Portal credential capture
@@ -119,3 +129,21 @@
 - Implemented full Evil Portal with captive portal and credential capture
 - Added ESPAsyncWebServer, AsyncTCP, IRremote libraries
 - Firmware uploaded to Cardputer for testing
+
+### Session 3 (Jan 9, 2026)
+- Context restored from session summary (previous session hit context limit)
+- User testing revealed 5 remaining bugs:
+  1. 5GHz network click shows "No actions" with no explanation
+  2. Pressing B (BLE scan) freezes device
+  3. Combined scan (OK) freezes at 45%
+  4. About menu does nothing (TODO comment only)
+  5. Menu actions misfire (About triggers scan)
+- Created comprehensive plan and got user approval
+- Fixed all 5 bugs:
+  - Added yieldDelay() helper for watchdog-safe delays
+  - Added yield() calls and timeout to BruceBLE::init()
+  - Added g_consumeNextInput flag to prevent key bleed-through
+  - Added 5GHz warning popup to TargetRadar
+  - Improved 5GHz messaging in TargetDetail
+  - Created AboutPanel.h/cpp and wired up in main.cpp
+- Firmware rebuilt and uploaded to Cardputer for testing
