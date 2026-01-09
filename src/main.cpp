@@ -59,6 +59,13 @@ static uint32_t g_lastKeyMs = 0;  // Debounce
 static constexpr uint32_t KEY_DEBOUNCE_MS = 50;
 static bool g_consumeNextInput = false;  // Prevents key "bleed-through" after menu actions
 
+void setAppState(AppState newState) {
+    if (Serial) {
+        Serial.printf("[STATE] %d -> %d\n", (int)g_state, (int)newState);
+    }
+    g_state = newState;
+}
+
 // =============================================================================
 // SETUP
 // =============================================================================
@@ -104,11 +111,11 @@ void setup() {
 
     // Start boot sequence
     g_boot->begin();
-    g_state = AppState::BOOTING;
+    setAppState(AppState::BOOTING);
 
     // Safe serial print (only if CDC is connected)
     if (Serial) {
-        Serial.println(F("[VANGUARD] Boot sequence started"));
+        Serial.println(F("[VANGUARD] Initialized. Entering loop."));
     }
 }
 
@@ -118,6 +125,17 @@ void setup() {
 
 void loop() {
     M5Cardputer.update();  // Read keyboard and buttons
+    
+    // Diagnostic Heartbeat
+    static uint32_t lastHeartbeat = 0;
+    if (millis() - lastHeartbeat > 2000) {
+        if (Serial) {
+            int bootPhase = (g_boot) ? (int)g_boot->getPhase() : -1;
+            Serial.printf("[HEARTBEAT] State: %d, BootPhase: %d, KeyPressed: %d, KeyChange: %d\n", 
+                (int)g_state, bootPhase, M5Cardputer.Keyboard.isPressed(), M5Cardputer.Keyboard.isChange());
+        }
+        lastHeartbeat = millis();
+    }
 
     // Handle keyboard input globally
     handleKeyboardInput();
@@ -129,22 +147,22 @@ void loop() {
         switch (action) {
             case MenuAction::RESCAN:
                 g_engine->beginScan();
-                g_state = AppState::SCANNING;
+                setAppState(AppState::SCANNING);
                 break;
             case MenuAction::RESCAN_BLE:
                 g_engine->beginBLEScan();
-                g_state = AppState::SCANNING;
+                setAppState(AppState::SCANNING);
                 break;
             case MenuAction::SETTINGS:
                 if (g_settings) {
                     g_settings->show();
-                    g_state = AppState::SETTINGS;
+                    setAppState(AppState::SETTINGS);
                 }
                 break;
             case MenuAction::ABOUT:
                 if (g_about) {
                     g_about->show();
-                    g_state = AppState::ABOUT;
+                    setAppState(AppState::ABOUT);
                 }
                 break;
             case MenuAction::BACK:
@@ -163,15 +181,24 @@ void loop() {
     }
 
     switch (g_state) {
-        case AppState::BOOTING:
+        case AppState::BOOTING: {
             g_boot->tick();
+            
+            // Failsafe: if boot sequence seems stuck in logo phase for too long
+            static uint32_t bootStart = millis();
+            if (millis() - bootStart > 5000 && !g_boot->isComplete()) {
+                if (Serial) Serial.println(F("[BOOT] Failsafe triggered: skipping boot animation."));
+                g_boot->skip();
+            }
+
             if (g_boot->isComplete()) {
                 if (Serial) Serial.println(F("[VANGUARD] Boot complete. Showing Scan Selector."));
                 // Transition to scan selection screen
                 g_scanSelector->show();
-                g_state = AppState::READY_TO_SCAN;
+                setAppState(AppState::READY_TO_SCAN);
             }
             break;
+        }
 
         case AppState::READY_TO_SCAN:
             g_scanSelector->tick();
@@ -195,7 +222,7 @@ void loop() {
                         g_engine->beginScan();
                         break;
                 }
-                g_state = AppState::SCANNING;
+                setAppState(AppState::SCANNING);
             }
             break;
 
@@ -203,12 +230,12 @@ void loop() {
             g_engine->tick();
             g_radar->renderScanning();
             if (g_engine->getScanState() == ScanState::COMPLETE) {
-                g_state = AppState::RADAR;
+                setAppState(AppState::RADAR);
             }
             // Allow cancel with Q or Backspace
             if (M5Cardputer.Keyboard.isKeyPressed('q') || M5Cardputer.Keyboard.isKeyPressed('Q') || M5Cardputer.Keyboard.isKeyPressed(KEY_BACKSPACE)) {
                 g_engine->stopScan();
-                g_state = AppState::RADAR;
+                setAppState(AppState::RADAR);
             }
             break;
 
@@ -227,7 +254,7 @@ void loop() {
                     }
                     g_detail = new TargetDetail(*g_engine, *selected);
                     g_radar->clearSelection();
-                    g_state = AppState::TARGET_DETAIL;
+                    setAppState(AppState::TARGET_DETAIL);
                 }
             }
             break;
@@ -242,14 +269,14 @@ void loop() {
                 if (g_detail->wantsBack()) {
                     delete g_detail;
                     g_detail = nullptr;
-                    g_state = AppState::RADAR;
+                    setAppState(AppState::RADAR);
                 }
                 // Check if action was confirmed
                 else if (g_detail->actionConfirmed()) {
                     ActionType action = g_detail->getConfirmedAction();
                     g_detail->clearActionConfirmation();
                     g_engine->executeAction(action, g_detail->getTarget());
-                    g_state = AppState::ATTACKING;
+                    setAppState(AppState::ATTACKING);
                 }
             }
             break;
@@ -262,12 +289,12 @@ void loop() {
 
                 // Check if attack finished
                 if (!g_engine->isActionActive()) {
-                    g_state = AppState::TARGET_DETAIL;
+                    setAppState(AppState::TARGET_DETAIL);
                 }
                 // Check if user cancelled
                 if (g_detail->wantsBack()) {
                     g_engine->stopAction();
-                    g_state = AppState::TARGET_DETAIL;
+                    setAppState(AppState::TARGET_DETAIL);
                 }
             }
             break;
@@ -281,11 +308,11 @@ void loop() {
                 if (g_settings->wantsBack()) {
                     g_settings->clearBack();
                     g_settings->hide();
-                    g_state = AppState::RADAR;
+                    setAppState(AppState::RADAR);
                 }
             } else {
                 // Settings failed to initialize, go back
-                g_state = AppState::RADAR;
+                setAppState(AppState::RADAR);
             }
             break;
 
@@ -298,10 +325,10 @@ void loop() {
                 if (g_about->wantsBack()) {
                     g_about->clearBack();
                     g_about->hide();
-                    g_state = AppState::RADAR;
+                    setAppState(AppState::RADAR);
                 }
             } else {
-                g_state = AppState::RADAR;
+                setAppState(AppState::RADAR);
             }
             break;
 
@@ -317,7 +344,7 @@ void loop() {
             // Any key press restarts scanning
             if (M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed()) {
                 g_engine->beginScan();
-                g_state = AppState::SCANNING;
+                setAppState(AppState::SCANNING);
             }
             break;
     }
@@ -338,9 +365,12 @@ void handleKeyboardInput() {
         return;
     }
 
-    // Always check for pressed keys - isChange() can be unreliable
-    if (!M5Cardputer.Keyboard.isPressed()) {
-        return;  // No keys pressed
+    // Check for any key press or change
+    bool hasPress = M5Cardputer.Keyboard.isPressed();
+    bool hasChange = M5Cardputer.Keyboard.isChange();
+
+    if (!hasPress && !hasChange) {
+        return;  // No input
     }
 
     if (Serial) {
@@ -358,19 +388,17 @@ void handleKeyboardInput() {
     if (g_menu && g_menu->isVisible()) {
         if (M5Cardputer.Keyboard.isKeyPressed(';') || M5Cardputer.Keyboard.isKeyPressed(',')) {
             g_menu->navigateUp();
-        }
-        if (M5Cardputer.Keyboard.isKeyPressed('.') || M5Cardputer.Keyboard.isKeyPressed('/')) {
+        } else if (M5Cardputer.Keyboard.isKeyPressed('.') || M5Cardputer.Keyboard.isKeyPressed('/')) {
             g_menu->navigateDown();
-        }
-        if (M5Cardputer.Keyboard.isKeyPressed(KEY_ENTER) || M5Cardputer.Keyboard.isKeyPressed('e')) {
+        } else if (M5Cardputer.Keyboard.isKeyPressed(KEY_ENTER) || M5Cardputer.Keyboard.isKeyPressed('e')) {
             g_menu->select();
         }
         // Close menu with M, Q, or Backspace
-        if (M5Cardputer.Keyboard.isKeyPressed('m') || M5Cardputer.Keyboard.isKeyPressed('M') ||
+        else if (M5Cardputer.Keyboard.isKeyPressed('m') || M5Cardputer.Keyboard.isKeyPressed('M') ||
             M5Cardputer.Keyboard.isKeyPressed('q') || M5Cardputer.Keyboard.isKeyPressed(KEY_BACKSPACE)) {
             g_menu->hide();
         }
-        return;  // Don't process other input while menu is open
+        return;
     }
 
     // Global: 'M' to open menu (except during boot)
@@ -404,7 +432,7 @@ void handleKeyboardInput() {
     if (g_state == AppState::RADAR) {
         if (M5Cardputer.Keyboard.isKeyPressed('r') || M5Cardputer.Keyboard.isKeyPressed('R')) {
             g_engine->beginScan();
-            g_state = AppState::SCANNING;
+            setAppState(AppState::SCANNING);
             if (Serial) Serial.println(F("[VANGUARD] Rescan triggered"));
             return;
         }
@@ -413,7 +441,7 @@ void handleKeyboardInput() {
             g_engine->stopScan();
             g_radar->scrollToTop();
             g_scanSelector->show();
-            g_state = AppState::READY_TO_SCAN;
+            setAppState(AppState::READY_TO_SCAN);
             return;
         }
     }
@@ -480,7 +508,8 @@ void handleKeyboardInput() {
             M5Cardputer.Keyboard.isKeyPressed('q') ||
             M5Cardputer.Keyboard.isKeyPressed('`')) {
             g_engine->stopAction();
-            g_state = AppState::TARGET_DETAIL;
+            setAppState(AppState::TARGET_DETAIL);
+
         }
     }
 
@@ -509,7 +538,7 @@ void handleKeyboardInput() {
             M5Cardputer.Keyboard.isKeyPressed('q') ||
             M5Cardputer.Keyboard.isKeyPressed('`')) {
             g_settings->hide();
-            g_state = AppState::RADAR;
+            setAppState(AppState::RADAR);
         }
     }
 }
