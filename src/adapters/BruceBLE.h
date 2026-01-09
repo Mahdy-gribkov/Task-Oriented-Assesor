@@ -1,5 +1,5 @@
-#ifndef ASSESSOR_BRUCE_BLE_H
-#define ASSESSOR_BRUCE_BLE_H
+#ifndef VANGUARD_BRUCE_BLE_H
+#define VANGUARD_BRUCE_BLE_H
 
 /**
  * @file BruceBLE.h
@@ -20,11 +20,11 @@
 
 #include <Arduino.h>
 #include <NimBLEDevice.h>
-#include "../core/Types.h"
+#include "../core/VanguardTypes.h"
 #include <functional>
 #include <vector>
 
-namespace Assessor {
+namespace Vanguard {
 
 // =============================================================================
 // CONSTANTS
@@ -311,6 +311,6 @@ private:
     ScanCallbacks* m_scanCallbacks;
 };
 
-} // namespace Assessor
+} // namespace Vanguard
 
 #endif // ASSESSOR_BRUCE_BLE_H

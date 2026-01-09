@@ -6,7 +6,7 @@
 
 #include "ScanSelector.h"
 
-namespace Assessor {
+namespace Vanguard {
 
 ScanSelector::ScanSelector()
     : m_visible(false)
@@ -161,4 +161,4 @@ void ScanSelector::onKeyEnter() {
     m_selection = ScanChoice::COMBINED;
 }
 
-} // namespace Assessor
+} // namespace Vanguard

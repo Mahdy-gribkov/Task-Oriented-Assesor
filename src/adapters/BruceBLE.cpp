@@ -8,7 +8,7 @@
 
 #include "BruceBLE.h"
 
-namespace Assessor {
+namespace Vanguard {
 
 // =============================================================================
 // SINGLETON
@@ -56,7 +56,7 @@ bool BruceBLE::init() {
 
     // Check if NimBLE is already initialized
     if (!NimBLEDevice::getInitialized()) {
-        NimBLEDevice::init("Velora");
+        NimBLEDevice::init("VANGUARD");
         yield();  // Feed watchdog after NimBLE init
     } else {
         if (Serial) {
@@ -644,4 +644,4 @@ void BruceBLE::stopAttack() {
     m_state = BLEAdapterState::IDLE;
 }
 
-} // namespace Assessor
+} // namespace Vanguard

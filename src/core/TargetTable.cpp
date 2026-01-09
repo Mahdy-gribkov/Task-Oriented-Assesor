@@ -6,7 +6,7 @@
 #include "TargetTable.h"
 #include <algorithm>
 
-namespace Assessor {
+namespace Vanguard {
 
 TargetTable::TargetTable()
     : m_onAdded(nullptr)
@@ -92,6 +92,53 @@ size_t TargetTable::pruneStale(uint32_t now) {
 
 void TargetTable::clear() {
     m_targets.clear();
+}
+
+bool TargetTable::addVirtualTarget(const char* name, TargetType type) {
+    if (m_targets.size() >= MAX_TARGETS) return false;
+
+    // Check if exists
+    for (size_t i = 0; i < m_targets.size(); i++) {
+        if (m_targets[i].type == type && strcmp(m_targets[i].ssid, name) == 0) {
+            m_targets[i].lastSeenMs = millis(); // Assuming millis() is available
+            if (m_onUpdated) {
+                m_onUpdated(m_targets[i]);
+            }
+            return true;
+        }
+    }
+
+    // Add new virtual target
+    Target newTarget;
+    memset(&newTarget, 0, sizeof(Target)); // Initialize all members to 0
+    strncpy(newTarget.ssid, name, SSID_MAX_LEN - 1);
+    newTarget.ssid[SSID_MAX_LEN - 1] = '\0'; // Ensure null termination
+    newTarget.type = type;
+    newTarget.rssi = -30; // "Strongest" signal for virtual targets
+    newTarget.lastSeenMs = millis(); // Assuming millis() is available
+    // No bssid for virtual targets, or generate a unique one if needed
+    // For now, bssid will remain 0s from memset
+
+    m_targets.push_back(newTarget);
+
+    if (m_onAdded) {
+        m_onAdded(newTarget);
+    }
+    return true;
+}
+
+bool TargetTable::addAssociation(const uint8_t* clientMac, const uint8_t* apMac) {
+    int idx = findIndex(apMac);
+    if (idx < 0) return false; // AP not in table yet
+
+    Target& ap = m_targets[idx];
+    if (ap.type != TargetType::ACCESS_POINT) return false;
+
+    bool added = ap.addClientMac(clientMac);
+    if (added && m_onUpdated) {
+        m_onUpdated(ap);
+    }
+    return added;
 }
 
 // =============================================================================
@@ -217,4 +264,4 @@ int TargetTable::findIndex(const uint8_t* bssid) const {
     return -1;
 }
 
-} // namespace Assessor
+} // namespace Vanguard

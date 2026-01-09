@@ -8,9 +8,9 @@
 #include "TargetRadar.h"
 #include <M5Cardputer.h>
 
-namespace Assessor {
+namespace Vanguard {
 
-TargetRadar::TargetRadar(AssessorEngine& engine)
+TargetRadar::TargetRadar(VanguardEngine& engine)
     : m_engine(engine)
     , m_highlightIndex(0)
     , m_scrollOffset(0)
@@ -306,6 +306,14 @@ void TargetRadar::renderTargetItemToCanvas(const Target& target, int y, bool hig
         // Show connectable status
         m_canvas->setTextColor(Theme::COLOR_TEXT_MUTED, bgColor);
         m_canvas->drawString("Device", x + 50, y + 14);
+    } else if (target.type == TargetType::IR_DEVICE) {
+        // IR device - show type indicator
+        m_canvas->setTextColor(Theme::COLOR_WARNING, bgColor); // Use warning color for IR
+        m_canvas->setTextDatum(TL_DATUM);
+        m_canvas->drawString("IR", x + 24, y + 14);
+
+        m_canvas->setTextColor(Theme::COLOR_TEXT_MUTED, bgColor);
+        m_canvas->drawString("Remote", x + 44, y + 14);
     } else {
         // WiFi AP - show security
         const char* secLabel;
@@ -351,6 +359,14 @@ void TargetRadar::renderTargetItemToCanvas(const Target& target, int y, bool hig
             m_canvas->setTextColor(Theme::COLOR_TEXT_MUTED, bgColor);
         }
         m_canvas->drawString(chanStr, x + 64, y + 14);
+
+        // Client count
+        if (target.clientCount > 0) {
+            char cliStr[8];
+            snprintf(cliStr, sizeof(cliStr), "C:%d", target.clientCount);
+            m_canvas->setTextColor(Theme::COLOR_ACCENT, bgColor);
+            m_canvas->drawString(cliStr, x + 110, y + 14);
+        }
     }
 }
 
@@ -585,4 +601,4 @@ void TargetRadar::render5GHzWarning() {
     m_canvas->drawString("[Q] Cancel", centerX + 60, centerY + 30);
 }
 
-} // namespace Assessor
+} // namespace Vanguard

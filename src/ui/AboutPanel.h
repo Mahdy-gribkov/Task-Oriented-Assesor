@@ -1,5 +1,5 @@
-#ifndef ASSESSOR_ABOUT_PANEL_H
-#define ASSESSOR_ABOUT_PANEL_H
+#ifndef VANGUARD_ABOUT_PANEL_H
+#define VANGUARD_ABOUT_PANEL_H
 
 /**
  * @file AboutPanel.h
@@ -9,7 +9,7 @@
 #include <M5Cardputer.h>
 #include "Theme.h"
 
-namespace Assessor {
+namespace Vanguard {
 
 class AboutPanel {
 public:
@@ -44,6 +44,6 @@ private:
     static constexpr uint32_t RENDER_INTERVAL_MS = 50;
 };
 
-} // namespace Assessor
+} // namespace Vanguard
 
 #endif // ASSESSOR_ABOUT_PANEL_H

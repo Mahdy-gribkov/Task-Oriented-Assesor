@@ -1,5 +1,5 @@
-#ifndef ASSESSOR_ACTION_RESOLVER_H
-#define ASSESSOR_ACTION_RESOLVER_H
+#ifndef VANGUARD_ACTION_RESOLVER_H
+#define VANGUARD_ACTION_RESOLVER_H
 
 /**
  * @file ActionResolver.h
@@ -21,10 +21,10 @@
  * }
  */
 
-#include "Types.h"
+#include "VanguardTypes.h"
 #include <vector>
 
-namespace Assessor {
+namespace Vanguard {
 
 class ActionResolver {
 public:
@@ -84,6 +84,6 @@ private:
     bool isImplemented(ActionType action) const;
 };
 
-} // namespace Assessor
+} // namespace Vanguard
 
 #endif // ASSESSOR_ACTION_RESOLVER_H

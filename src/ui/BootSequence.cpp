@@ -7,7 +7,7 @@
 #include "Theme.h"
 #include <M5Cardputer.h>
 
-namespace Assessor {
+namespace Vanguard {
 
 BootSequence::BootSequence()
     : m_phase(BootPhase::LOGO_FADE_IN)
@@ -160,11 +160,11 @@ void BootSequence::drawLogo(uint8_t alpha) {
         M5Cardputer.Display.drawPixel(logoX + 31 - i, logoY + i + 1, logoColor);
     }
 
-    // "VELORA" text in coral
+    // "VANGUARD" text in coral
     M5Cardputer.Display.setTextSize(2);
     M5Cardputer.Display.setTextColor(logoColor, Theme::COLOR_BACKGROUND);
     M5Cardputer.Display.setTextDatum(MC_DATUM);
-    M5Cardputer.Display.drawString("VELORA", centerX, y + 22);
+    M5Cardputer.Display.drawString("VANGUARD", centerX, y + 22);
 }
 
 void BootSequence::drawTagline(uint8_t alpha) {
@@ -229,4 +229,4 @@ bool BootSequence::checkSkipInput() {
     return false;
 }
 
-} // namespace Assessor
+} // namespace Vanguard

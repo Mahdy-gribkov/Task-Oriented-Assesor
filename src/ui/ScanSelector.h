@@ -1,5 +1,5 @@
-#ifndef ASSESSOR_SCAN_SELECTOR_H
-#define ASSESSOR_SCAN_SELECTOR_H
+#ifndef VANGUARD_SCAN_SELECTOR_H
+#define VANGUARD_SCAN_SELECTOR_H
 
 /**
  * @file ScanSelector.h
@@ -14,7 +14,7 @@
 #include <M5Cardputer.h>
 #include "Theme.h"
 
-namespace Assessor {
+namespace Vanguard {
 
 enum class ScanChoice {
     NONE,
@@ -70,6 +70,6 @@ private:
     void drawOption(int16_t y, const char* key, const char* label, uint16_t keyColor);
 };
 
-} // namespace Assessor
+} // namespace Vanguard
 
 #endif // ASSESSOR_SCAN_SELECTOR_H

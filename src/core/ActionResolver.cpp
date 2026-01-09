@@ -5,7 +5,7 @@
 
 #include "ActionResolver.h"
 
-namespace Assessor {
+namespace Vanguard {
 
 // =============================================================================
 // ACTION DEFINITIONS
@@ -99,12 +99,23 @@ const ActionResolver::ActionDefinition ActionResolver::s_actionDefs[] = {
         false, false,
         SecurityType::UNKNOWN
     },
+    
+    // IR Actions
     {
-        ActionType::BLE_SKIMMER_DETECT,
-        "Skimmer Check",
-        "Analyze for suspicious traits",
+        ActionType::IR_REPLAY,
+        "IR Replay",
+        "Record and replay IR signal",
         false,
-        TargetType::BLE_DEVICE,
+        TargetType::IR_DEVICE,
+        false, false,
+        SecurityType::UNKNOWN
+    },
+    {
+        ActionType::IR_TVBGONE,
+        "TV-B-Gone",
+        "Power cycle nearby TVs",
+        true,
+        TargetType::IR_DEVICE,
         false, false,
         SecurityType::UNKNOWN
     }
@@ -246,7 +257,7 @@ bool ActionResolver::check5GHzCompatibility(const Target& target, ActionType act
 
 bool ActionResolver::isImplemented(ActionType action) const {
     // Only return true for actions that are FULLY implemented
-    // and wired up in AssessorEngine::executeAction()
+    // and wired up in VanguardEngine::executeAction()
     switch (action) {
         // WORKING - fully implemented
         case ActionType::DEAUTH_ALL:
@@ -255,12 +266,14 @@ bool ActionResolver::isImplemented(ActionType action) const {
         case ActionType::EVIL_TWIN:          // Basic soft AP implemented
         case ActionType::BLE_SPAM:
         case ActionType::BLE_SOUR_APPLE:
+        case ActionType::CAPTURE_HANDSHAKE:  // Now fully implemented
+        case ActionType::IR_REPLAY:
+        case ActionType::IR_TVBGONE:
             return true;
 
         // NOT IMPLEMENTED - don't show to user
         case ActionType::MONITOR:            // Not routed
         case ActionType::CAPTURE_PMKID:      // Not routed
-        case ActionType::CAPTURE_HANDSHAKE:  // Partial, detection missing
         case ActionType::PROBE_FLOOD:        // Not implemented
         case ActionType::BLE_SKIMMER_DETECT: // Not implemented
         default:
@@ -268,4 +281,4 @@ bool ActionResolver::isImplemented(ActionType action) const {
     }
 }
 
-} // namespace Assessor
+} // namespace Vanguard

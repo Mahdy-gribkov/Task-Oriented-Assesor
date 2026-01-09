@@ -147,3 +147,58 @@
   - Improved 5GHz messaging in TargetDetail
   - Created AboutPanel.h/cpp and wired up in main.cpp
 - Firmware rebuilt and uploaded to Cardputer for testing
+
+### Session 4 (Jan 9, 2026 - Current)
+- **Goal**: Phase 3 - Engine Fusion (Bruce + Evil-M5)
+- **Governance**: "Cycle of Truth" established. Strict Doc-Work-Doc workflow.
+- **Plan**: `FusionPlan.md` created and approved.
+- **Next Steps**:
+  1. Cleanup/Purge "fake" code.
+  2. Implement Promiscuous Mode (Client Discovery).
+  3. Implement SD Card Persistence (Evil Portal).
+
+### Phase 3.0: Cleanup & Migration (COMPLETE)
+- [x] **Library Audit** - Added M5Unified to `platformio.ini` [antigravity]
+- [x] **Purge BruceWiFi** - Added implementation TODOs for Phase 3.1 [antigravity]
+- [x] **Purge EvilPortal** - Added implementation TODOs for Phase 3.2 [antigravity]
+
+### Phase 3.1: The Eyes (Visibility) (COMPLETE)
+- [x] **Data Frame Parsing** - Implement 802.11 header extraction in `BruceWiFi` [antigravity]
+- [x] **Client Tracking** - Update `TargetTable` to associate clients with APs [antigravity]
+- [x] **UI Update** - Show client counts in `TargetRadar` and `TargetDetail` [antigravity]
+
+### Phase 3.2: The Memory (Persistence) (COMPLETE)
+- [x] **SD Card Manager** - Initialize SD via `M5Unified` and create folder structure [antigravity]
+- [x] **Evil Portal Persistence** - Save captured credentials to `credentials.csv` on SD [antigravity]
+- [x] **Template Loading** - Load custom HTML from SD card [antigravity]
+
+### Phase 3.3: The Capture (Handshakes) (COMPLETE)
+- [x] **EAPOL Sniffing** - Detect EAPOL frames in `promiscuousCallback` [antigravity]
+- [x] **PCAP Writer** - Implement libpcap global and packet headers [antigravity]
+- [x] **Handshake Capture** - Orchestrate deauth + sniff cycle to capture 4-way handshake [antigravity]
+- [x] **Verification** - Basic sanity check of captured EAPOL frames [antigravity]
+
+
+### Session 5 (Jan 9, 2026 - CURRENT)
+- **Goal**: Phase 3.4 - The Voice (IR) & UI Polish
+- **Status**: Starting IR implementation.
+- **Tasks**:
+  1. Implement IR Adapter.
+  2. Implement TV-B-Gone / IR Replay.
+  3. Finalize UI "Target-First" flow.
+  4. **Document AV False Positive**: Windows Defender flagged `EvilPortal.cpp` as a WebShell due to phishing templates. Confirmed as false positive and documented in `FusionPlan.md`.
+
+### Phase 3.4: The Voice (Transmission) (COMPLETE)
+- [x] **IR Implementation** - Create `BruceIR` adapter for Cardputer IR TX/RX [antigravity]
+- [x] **TV-B-Gone** - Core infrared power cycling functionality [antigravity]
+- [x] **UI Action Mapping** - Wire IR actions to the DetailView [antigravity]
+
+### Phase 3.5: Deployment (M5Launcher) (COMPLETE)
+- [x] **Incident Response** - Document Windows Defender false positive incident [antigravity]
+- [x] **Build Automation** - Create `build_release.ps1` for easy .bin generation [antigravity]
+- [x] **Phase 3 Wrap-up** - Finalize Session 5 walkthrough [antigravity]
+
+---
+**Phase 3 (Engine Fusion) is now 100% COMPLETE.**
+The Assessor has Eyes (Visibility), Memory (SD), Hands (Offense), and Voice (Transmission).
+Next: Phase 4.0 - Field Testing & Refinement.

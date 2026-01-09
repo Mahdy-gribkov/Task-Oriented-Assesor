@@ -10,7 +10,7 @@
  */
 
 #include <M5Cardputer.h>
-#include "core/AssessorEngine.h"
+#include "core/VanguardEngine.h"
 #include "ui/BootSequence.h"
 #include "ui/ScanSelector.h"
 #include "ui/TargetRadar.h"
@@ -20,7 +20,7 @@
 #include "ui/AboutPanel.h"
 #include "ui/Theme.h"
 
-using namespace Assessor;
+using namespace Vanguard;
 
 // Note: KEY_ENTER and KEY_BACKSPACE are defined in M5Cardputer's Keyboard_def.h
 // We'll use the library's definitions
@@ -32,7 +32,7 @@ void handleKeyboardInput();
 // GLOBALS
 // =============================================================================
 
-static AssessorEngine* g_engine       = nullptr;
+static VanguardEngine* g_engine       = nullptr;
 static BootSequence*   g_boot         = nullptr;
 static ScanSelector*   g_scanSelector = nullptr;
 static TargetRadar*    g_radar        = nullptr;
@@ -86,7 +86,7 @@ void setup() {
     yield();  // Feed watchdog
 
     // Initialize components (heavy operations)
-    g_engine = &AssessorEngine::getInstance();
+    g_engine = &VanguardEngine::getInstance();
 
     yield();  // Feed watchdog
 
@@ -103,7 +103,7 @@ void setup() {
 
     // Safe serial print (only if CDC is connected)
     if (Serial) {
-        Serial.println(F("[Assessor] Boot sequence started"));
+        Serial.println(F("[VANGUARD] Boot sequence started"));
     }
 }
 

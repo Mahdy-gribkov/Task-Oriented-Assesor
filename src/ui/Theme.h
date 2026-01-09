@@ -13,7 +13,7 @@
 
 #include <cstdint>
 
-namespace Assessor {
+namespace Vanguard {
 
 namespace Theme {
 
@@ -79,8 +79,9 @@ constexpr int16_t PADDING_XL     = 16;
 
 constexpr int16_t MARGIN_XS      = 2;
 constexpr int16_t MARGIN_SM      = 4;
-constexpr int16_t MARGIN_MD      = 8;
-constexpr int16_t MARGIN_LG      = 12;
+// Branding
+static constexpr const char* APP_NAME = "VANGUARD";
+static constexpr const char* VERSION_STRING = "v0.1-Alpha";
 
 // =============================================================================
 // TYPOGRAPHY
@@ -152,6 +153,6 @@ inline uint16_t getSecurityColor(uint8_t securityType) {
 
 } // namespace Theme
 
-} // namespace Assessor
+} // namespace Vanguard
 
 #endif // VELORA_THEME_H

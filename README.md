@@ -1,7 +1,7 @@
-# The Assessor
+# VANGUARD
 
 <p align="center">
-  <img src="docs/images/logo.png" alt="The Assessor Logo" width="200"/>
+  <img src="docs/images/logo.png" alt="VANGUARD Logo" width="200"/>
   <br/>
   <strong>Target First. Always.</strong>
 </p>

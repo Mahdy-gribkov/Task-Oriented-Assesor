@@ -1,15 +1,17 @@
 /**
- * @file AssessorEngine.cpp
+ * @file VanguardEngine.cpp
  * @brief The orchestrator - WiFi scanning with proper timing
  */
 
-#include "AssessorEngine.h"
+#include "VanguardEngine.h"
 #include "../adapters/BruceWiFi.h"
 #include "../adapters/BruceBLE.h"
 #include "../adapters/EvilPortal.h"
+#include "../adapters/BruceIR.h"
+#include "SDManager.h"
 #include <WiFi.h>
 
-namespace Assessor {
+namespace Vanguard {
 
 // =============================================================================
 // HELPER: Watchdog-safe delay
@@ -27,12 +29,12 @@ static void yieldDelay(uint32_t ms) {
 // SINGLETON
 // =============================================================================
 
-AssessorEngine& AssessorEngine::getInstance() {
-    static AssessorEngine instance;
+VanguardEngine& VanguardEngine::getInstance() {
+    static VanguardEngine instance;
     return instance;
 }
 
-AssessorEngine::AssessorEngine()
+VanguardEngine::VanguardEngine()
     : m_initialized(false)
     , m_scanState(ScanState::IDLE)
     , m_scanProgress(0)
@@ -42,13 +44,16 @@ AssessorEngine::AssessorEngine()
     , m_onActionProgress(nullptr)
     , m_scanStartMs(0)
     , m_actionStartMs(0)
+    , m_transitionStep(0)
+    , m_transitionStartMs(0)
+    , m_bleInitAttempts(0)
 {
     m_actionProgress.type = ActionType::NONE;
     m_actionProgress.result = ActionResult::SUCCESS;
     m_actionProgress.packetsSent = 0;
 }
 
-AssessorEngine::~AssessorEngine() {
+VanguardEngine::~VanguardEngine() {
     shutdown();
 }
 
@@ -56,7 +61,7 @@ AssessorEngine::~AssessorEngine() {
 // LIFECYCLE
 // =============================================================================
 
-bool AssessorEngine::init() {
+bool VanguardEngine::init() {
     if (m_initialized) return true;
 
     if (Serial) {
@@ -88,19 +93,33 @@ bool AssessorEngine::init() {
 
     m_initialized = true;
 
+    // Step 5: Initialize SD Card
+    SDManager::getInstance().init();
+
+    // Step 6: Initialize IR
+    BruceIR::getInstance().init();
+
+    // Step 7: Add virtual targets
+    m_targetTable.addVirtualTarget("Universal Remote", TargetType::IR_DEVICE);
+
+    // Wire up BruceWiFi associations
+    BruceWiFi::getInstance().onAssociation([this](const uint8_t* client, const uint8_t* ap) {
+        this->m_targetTable.addAssociation(client, ap);
+    });
+
     if (Serial) {
         Serial.printf("[WiFi] Ready (MAC: %s)\n", WiFi.macAddress().c_str());
     }
     return true;
 }
 
-void AssessorEngine::shutdown() {
+void VanguardEngine::shutdown() {
     WiFi.disconnect();
     WiFi.mode(WIFI_OFF);
     m_initialized = false;
 }
 
-void AssessorEngine::tick() {
+void VanguardEngine::tick() {
     // Handle ASYNC WiFi scanning
     if (m_scanState == ScanState::WIFI_SCANNING) {
         // Check if async scan is complete
@@ -118,7 +137,7 @@ void AssessorEngine::tick() {
             }
             // Try to continue to BLE if combined scan
             if (m_combinedScan) {
-                processScanResults(0);  // Will chain to BLE
+                processScanResults(0);  // Will start transition
             } else {
                 m_scanState = ScanState::COMPLETE;
                 m_scanProgress = 100;
@@ -148,6 +167,11 @@ void AssessorEngine::tick() {
                 m_scanProgress = 100;
             }
         }
+    }
+
+    // Handle NON-BLOCKING WiFi→BLE transition
+    if (m_scanState == ScanState::TRANSITIONING_TO_BLE) {
+        tickTransition();
     }
 
     // Handle BLE scanning (async via NimBLE)
@@ -187,7 +211,7 @@ void AssessorEngine::tick() {
 // SCANNING
 // =============================================================================
 
-void AssessorEngine::beginScan() {
+void VanguardEngine::beginScan() {
     if (Serial) {
         Serial.println("[Scan] === BEGIN COMBINED SCAN ===");
     }
@@ -227,7 +251,7 @@ void AssessorEngine::beginScan() {
     }
 }
 
-void AssessorEngine::beginWiFiScan() {
+void VanguardEngine::beginWiFiScan() {
     if (Serial) {
         Serial.println("[WiFi] === BEGIN WIFI SCAN ===");
     }
@@ -266,7 +290,7 @@ void AssessorEngine::beginWiFiScan() {
     }
 }
 
-void AssessorEngine::beginBLEScan() {
+void VanguardEngine::beginBLEScan() {
     if (Serial) {
         Serial.println("[BLE] Starting BLE-only scan...");
     }
@@ -311,34 +335,34 @@ void AssessorEngine::beginBLEScan() {
     }
 }
 
-void AssessorEngine::stopScan() {
+void VanguardEngine::stopScan() {
     WiFi.scanDelete();
     BruceBLE::getInstance().stopScan();
     m_scanState = ScanState::IDLE;
     m_combinedScan = false;
 }
 
-bool AssessorEngine::isCombinedScan() const {
+bool VanguardEngine::isCombinedScan() const {
     return m_combinedScan;
 }
 
-ScanState AssessorEngine::getScanState() const {
+ScanState VanguardEngine::getScanState() const {
     return m_scanState;
 }
 
-uint8_t AssessorEngine::getScanProgress() const {
+uint8_t VanguardEngine::getScanProgress() const {
     return m_scanProgress;
 }
 
-void AssessorEngine::onScanProgress(ScanProgressCallback cb) {
+void VanguardEngine::onScanProgress(ScanProgressCallback cb) {
     m_onScanProgress = cb;
 }
 
-void AssessorEngine::tickScan() {
+void VanguardEngine::tickScan() {
     // Handled in tick()
 }
 
-void AssessorEngine::processScanResults(int count) {
+void VanguardEngine::processScanResults(int count) {
     for (int i = 0; i < count; i++) {
         Target target;
         memset(&target, 0, sizeof(Target));
@@ -399,61 +423,18 @@ void AssessorEngine::processScanResults(int count) {
 
     WiFi.scanDelete();  // Free memory
 
-    // If combined scan, chain to BLE scan
+    // If combined scan, start NON-BLOCKING transition to BLE
     if (m_combinedScan) {
         if (Serial) {
-            Serial.println("[Scan] WiFi done, preparing BLE...");
+            Serial.println("[Scan] WiFi done, starting BLE transition...");
         }
 
-        // Shut down WiFi before starting BLE (ESP32 shares radio)
-        // Use yieldDelay to prevent watchdog timeout
-        WiFi.disconnect(true);
-        yield();
-        WiFi.mode(WIFI_OFF);
-        yieldDelay(200);  // Watchdog-safe transition delay
-
-        BruceBLE& ble = BruceBLE::getInstance();
-        ble.shutdown();
-        yieldDelay(100);  // Watchdog-safe delay
-
-        // Try BLE init with retries
-        bool bleInitOk = false;
-        for (int attempt = 0; attempt < 3; attempt++) {
-            if (Serial) {
-                Serial.printf("[BLE] Init attempt %d...\n", attempt + 1);
-            }
-            yield();  // Feed watchdog before each attempt
-
-            bleInitOk = ble.init();
-            if (bleInitOk) {
-                if (Serial) {
-                    Serial.println("[BLE] Init success!");
-                }
-                break;
-            }
-
-            if (Serial) {
-                Serial.printf("[BLE] Init attempt %d failed\n", attempt + 1);
-            }
-            yieldDelay(100);  // Watchdog-safe wait before retry
-        }
-
-        if (!bleInitOk) {
-            if (Serial) {
-                Serial.println("[BLE] Init failed after retries, completing without BLE");
-            }
-            m_scanState = ScanState::COMPLETE;
-            m_scanProgress = 100;
-            if (m_onScanProgress) {
-                m_onScanProgress(m_scanState, m_scanProgress);
-            }
-            return;
-        }
-
-        m_scanState = ScanState::BLE_SCANNING;
-        m_scanProgress = 50;
-        m_scanStartMs = millis();
-        ble.beginScan(3000);
+        // Start the transition state machine
+        m_scanState = ScanState::TRANSITIONING_TO_BLE;
+        m_transitionStep = 0;
+        m_transitionStartMs = millis();
+        m_bleInitAttempts = 0;
+        m_scanProgress = 46;  // Just past WiFi
 
         if (m_onScanProgress) {
             m_onScanProgress(m_scanState, m_scanProgress);
@@ -468,7 +449,141 @@ void AssessorEngine::processScanResults(int count) {
     }
 }
 
-void AssessorEngine::processBLEScanResults() {
+// =============================================================================
+// NON-BLOCKING WIFI→BLE TRANSITION
+// =============================================================================
+
+void VanguardEngine::tickTransition() {
+    // State machine for WiFi→BLE transition
+    // Each step does minimal work and returns, next tick continues
+    uint32_t elapsed = millis() - m_transitionStartMs;
+
+    switch (m_transitionStep) {
+        case 0:
+            // Step 0: Disconnect WiFi
+            WiFi.disconnect(true);
+            m_transitionStep = 1;
+            m_transitionStartMs = millis();
+            m_scanProgress = 46;
+            if (Serial) Serial.println("[Trans] Step 0: WiFi disconnect");
+            break;
+
+        case 1:
+            // Step 1: Wait 50ms, then turn off WiFi
+            if (elapsed >= 50) {
+                WiFi.mode(WIFI_OFF);
+                m_transitionStep = 2;
+                m_transitionStartMs = millis();
+                m_scanProgress = 47;
+                if (Serial) Serial.println("[Trans] Step 1: WiFi off");
+            }
+            break;
+
+        case 2:
+            // Step 2: Wait 100ms for radio to fully stop
+            if (elapsed >= 100) {
+                BruceBLE& ble = BruceBLE::getInstance();
+                ble.shutdown();
+                m_transitionStep = 3;
+                m_transitionStartMs = millis();
+                m_scanProgress = 48;
+                if (Serial) Serial.println("[Trans] Step 2: BLE shutdown");
+            }
+            break;
+
+        case 3:
+            // Step 3: Wait 50ms, then try BLE init
+            if (elapsed >= 50) {
+                m_transitionStep = 4;
+                m_transitionStartMs = millis();
+                m_bleInitAttempts = 0;
+                if (Serial) Serial.println("[Trans] Step 3: Ready for BLE init");
+            }
+            break;
+
+        case 4:
+            // Step 4: Try BLE init (one attempt per tick)
+            {
+                BruceBLE& ble = BruceBLE::getInstance();
+                m_bleInitAttempts++;
+
+                if (Serial) {
+                    Serial.printf("[Trans] Step 4: BLE init attempt %d\n", m_bleInitAttempts);
+                }
+
+                bool initOk = ble.init();
+
+                if (initOk) {
+                    // Success! Start BLE scan
+                    m_transitionStep = 5;
+                    m_transitionStartMs = millis();
+                    m_scanProgress = 49;
+                    if (Serial) Serial.println("[Trans] BLE init SUCCESS");
+                } else if (m_bleInitAttempts >= 3) {
+                    // Failed after 3 attempts, complete without BLE
+                    if (Serial) Serial.println("[Trans] BLE init FAILED, completing without BLE");
+                    m_scanState = ScanState::COMPLETE;
+                    m_scanProgress = 100;
+                    if (m_onScanProgress) {
+                        m_onScanProgress(m_scanState, m_scanProgress);
+                    }
+                } else {
+                    // Wait before retry
+                    m_transitionStep = 100;  // Wait state
+                    m_transitionStartMs = millis();
+                }
+            }
+            break;
+
+        case 5:
+            // Step 5: Start BLE scan
+            {
+                BruceBLE& ble = BruceBLE::getInstance();
+                ble.beginScan(3000);
+
+                m_scanState = ScanState::BLE_SCANNING;
+                m_scanProgress = 50;
+                m_scanStartMs = millis();
+
+                if (Serial) Serial.println("[Trans] Step 5: BLE scan started");
+
+                if (m_onScanProgress) {
+                    m_onScanProgress(m_scanState, m_scanProgress);
+                }
+            }
+            break;
+
+        case 100:
+            // Wait state: wait 100ms before retrying BLE init
+            if (elapsed >= 100) {
+                m_transitionStep = 4;
+                m_transitionStartMs = millis();
+            }
+            break;
+
+        default:
+            // Shouldn't happen, force complete
+            m_scanState = ScanState::COMPLETE;
+            m_scanProgress = 100;
+            break;
+    }
+
+    // Safety timeout for entire transition: 5 seconds
+    if (m_scanState == ScanState::TRANSITIONING_TO_BLE) {
+        // Check total transition time (from first step)
+        // We can't easily track this without another var, so use a generous per-step timeout
+        if (elapsed > 2000) {
+            if (Serial) Serial.println("[Trans] Step timeout, completing without BLE");
+            m_scanState = ScanState::COMPLETE;
+            m_scanProgress = 100;
+            if (m_onScanProgress) {
+                m_onScanProgress(m_scanState, m_scanProgress);
+            }
+        }
+    }
+}
+
+void VanguardEngine::processBLEScanResults() {
     BruceBLE& ble = BruceBLE::getInstance();
     const std::vector<BLEDeviceInfo>& devices = ble.getDevices();
 
@@ -520,24 +635,24 @@ void AssessorEngine::processBLEScanResults() {
 // TARGETS
 // =============================================================================
 
-const std::vector<Target>& AssessorEngine::getTargets() const {
+const std::vector<Target>& VanguardEngine::getTargets() const {
     return m_targetTable.getAll();
 }
 
-size_t AssessorEngine::getTargetCount() const {
+size_t VanguardEngine::getTargetCount() const {
     return m_targetTable.count();
 }
 
-std::vector<Target> AssessorEngine::getFilteredTargets(const TargetFilter& filter,
+std::vector<Target> VanguardEngine::getFilteredTargets(const TargetFilter& filter,
                                                         SortOrder order) const {
     return m_targetTable.getFiltered(filter, order);
 }
 
-const Target* AssessorEngine::findTarget(const uint8_t* bssid) const {
+const Target* VanguardEngine::findTarget(const uint8_t* bssid) const {
     return m_targetTable.findByBssid(bssid);
 }
 
-void AssessorEngine::clearTargets() {
+void VanguardEngine::clearTargets() {
     m_targetTable.clear();
 }
 
@@ -545,11 +660,11 @@ void AssessorEngine::clearTargets() {
 // ACTIONS
 // =============================================================================
 
-std::vector<AvailableAction> AssessorEngine::getActionsFor(const Target& target) const {
+std::vector<AvailableAction> VanguardEngine::getActionsFor(const Target& target) const {
     return m_actionResolver.getActionsFor(target);
 }
 
-bool AssessorEngine::executeAction(ActionType action, const Target& target) {
+bool VanguardEngine::executeAction(ActionType action, const Target& target) {
     // Reset progress
     m_actionProgress.type = action;
     m_actionProgress.result = ActionResult::IN_PROGRESS;
@@ -700,14 +815,41 @@ bool AssessorEngine::executeAction(ActionType action, const Target& target) {
                 return false;
             }
 
-            m_actionProgress.statusText = "Capturing...";
-            bool success = wifi.captureHandshake(target.bssid, target.channel, true);
+            m_actionProgress.statusText = "Capturing handshake...";
+            
+            // Create filename based on BSSID
+            char filename[64];
+            snprintf(filename, sizeof(filename), "/captures/handshake_%02X%02X%02X.pcap",
+                     target.bssid[3], target.bssid[4], target.bssid[5]);
+            
+            // Enable PCAP logging
+            wifi.setPcapLogging(true, filename);
+
+            // Start deauth to force a handshake
+            bool success = wifi.deauthAll(target.bssid, target.channel);
             if (!success) {
+                wifi.setPcapLogging(false);
                 m_actionProgress.result = ActionResult::FAILED_HARDWARE;
-                m_actionProgress.statusText = "Capture failed";
+                m_actionProgress.statusText = "Deauth start failed";
                 m_actionActive = false;
                 return false;
             }
+
+            if (Serial) {
+                Serial.printf("[Attack] Handshake capture started on %s\n", filename);
+            }
+            return true;
+        }
+
+        case ActionType::IR_REPLAY: {
+            m_actionProgress.statusText = "Recording IR...";
+            BruceIR::getInstance().startRecording();
+            return true;
+        }
+
+        case ActionType::IR_TVBGONE: {
+            m_actionProgress.statusText = "Spamming power...";
+            BruceIR::getInstance().sendTVBGone();
             return true;
         }
 
@@ -719,7 +861,7 @@ bool AssessorEngine::executeAction(ActionType action, const Target& target) {
     }
 }
 
-void AssessorEngine::stopAction() {
+void VanguardEngine::stopAction() {
     BruceWiFi& wifi = BruceWiFi::getInstance();
     wifi.stopAttack();
 
@@ -742,23 +884,26 @@ void AssessorEngine::stopAction() {
     }
 }
 
-bool AssessorEngine::isActionActive() const {
+bool VanguardEngine::isActionActive() const {
     return m_actionActive;
 }
 
-ActionProgress AssessorEngine::getActionProgress() const {
+ActionProgress VanguardEngine::getActionProgress() const {
     return m_actionProgress;
 }
 
-void AssessorEngine::onActionProgress(ActionProgressCallback cb) {
+void VanguardEngine::onActionProgress(ActionProgressCallback cb) {
     m_onActionProgress = cb;
 }
 
-void AssessorEngine::tickAction() {
+void VanguardEngine::tickAction() {
     if (!m_actionActive) return;
 
     BruceWiFi& wifi = BruceWiFi::getInstance();
     wifi.tick();
+
+    // Also tick IR for recording
+    BruceIR::getInstance().tick();
 
     // Also tick BLE for BLE attacks
     BruceBLE& ble = BruceBLE::getInstance();
@@ -790,6 +935,13 @@ void AssessorEngine::tickAction() {
     m_actionProgress.packetsSent = wifiPackets + blePackets;
     m_actionProgress.elapsedMs = millis() - m_actionStartMs;
 
+    // Special handling for handshake capture status
+    if (m_actionProgress.type == ActionType::CAPTURE_HANDSHAKE) {
+        static char statusBuf[48];
+        snprintf(statusBuf, sizeof(statusBuf), "Sniffing... (EAPOL: %u)", (unsigned int)wifi.getEapolCount());
+        m_actionProgress.statusText = statusBuf;
+    }
+
     // Report progress
     if (m_onActionProgress) {
         m_onActionProgress(m_actionProgress);
@@ -800,20 +952,20 @@ void AssessorEngine::tickAction() {
 // HARDWARE STATUS
 // =============================================================================
 
-bool AssessorEngine::hasWiFi() const {
+bool VanguardEngine::hasWiFi() const {
     return m_initialized;
 }
 
-bool AssessorEngine::hasBLE() const {
+bool VanguardEngine::hasBLE() const {
     return true;
 }
 
-bool AssessorEngine::hasRF() const {
+bool VanguardEngine::hasRF() const {
     return false;
 }
 
-bool AssessorEngine::hasIR() const {
+bool VanguardEngine::hasIR() const {
     return true;
 }
 
-} // namespace Assessor
+} // namespace Vanguard

@@ -1,5 +1,5 @@
-#ifndef ASSESSOR_SETTINGS_PANEL_H
-#define ASSESSOR_SETTINGS_PANEL_H
+#ifndef VANGUARD_SETTINGS_PANEL_H
+#define VANGUARD_SETTINGS_PANEL_H
 
 /**
  * @file SettingsPanel.h
@@ -10,7 +10,7 @@
 #include "Theme.h"
 #include <vector>
 
-namespace Assessor {
+namespace Vanguard {
 
 enum class SettingType {
     TOGGLE,     // On/Off boolean
@@ -87,6 +87,6 @@ private:
     void renderSetting(const Setting& setting, int y, bool highlighted);
 };
 
-} // namespace Assessor
+} // namespace Vanguard
 
 #endif // ASSESSOR_SETTINGS_PANEL_H

@@ -1,5 +1,5 @@
-#ifndef ASSESSOR_MAIN_MENU_H
-#define ASSESSOR_MAIN_MENU_H
+#ifndef VANGUARD_MAIN_MENU_H
+#define VANGUARD_MAIN_MENU_H
 
 /**
  * @file MainMenu.h
@@ -17,7 +17,7 @@
 #include "Theme.h"
 #include <vector>
 
-namespace Assessor {
+namespace Vanguard {
 
 enum class MenuAction {
     NONE,
@@ -84,6 +84,6 @@ private:
     void renderMenuItem(int index, int y);
 };
 
-} // namespace Assessor
+} // namespace Vanguard
 
 #endif // ASSESSOR_MAIN_MENU_H

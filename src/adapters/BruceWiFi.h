@@ -1,5 +1,5 @@
-#ifndef ASSESSOR_BRUCE_WIFI_H
-#define ASSESSOR_BRUCE_WIFI_H
+#ifndef VANGUARD_BRUCE_WIFI_H
+#define VANGUARD_BRUCE_WIFI_H
 
 /**
  * @file BruceWiFi.h
@@ -23,10 +23,10 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <esp_wifi.h>
-#include "../core/Types.h"
+#include "../core/VanguardTypes.h"
 #include <functional>
 
-namespace Assessor {
+namespace Vanguard {
 
 // =============================================================================
 // CONSTANTS
@@ -75,6 +75,7 @@ using AttackProgressCallback = std::function<void(uint32_t packetsSent)>;
 using HandshakeCapturedCallback = std::function<void(const uint8_t* bssid)>;
 using CredentialCapturedCallback = std::function<void(const char* ssid, const char* password)>;
 using PacketCallback = std::function<void(const uint8_t* payload, uint16_t len, int8_t rssi)>;
+using AssociationCallback = std::function<void(const uint8_t* clientMac, const uint8_t* apMac)>;
 
 // =============================================================================
 // BruceWiFi Adapter Class
@@ -311,9 +312,19 @@ public:
      */
     void onPacketReceived(PacketCallback cb);
 
+    /**
+     * @brief Register association callback (client discovery)
+     */
+    void onAssociation(AssociationCallback cb);
+
     // -------------------------------------------------------------------------
     // Attack Control (Common)
     // -------------------------------------------------------------------------
+
+    /**
+     * @brief Enable/disable PCAP logging to SD card
+     */
+    void setPcapLogging(bool enabled, const char* filename = nullptr);
 
     /**
      * @brief Stop any active attack
@@ -324,6 +335,11 @@ public:
      * @brief Get packets sent during current attack
      */
     uint32_t getPacketsSent() const;
+
+    /**
+     * @brief Get EAPOL frames captured during current attack
+     */
+    uint32_t getEapolCount() const { return m_eapolCount; }
 
     /**
      * @brief Register attack progress callback
@@ -380,6 +396,11 @@ private:
     HandshakeCapturedCallback m_onHandshakeCaptured;
     CredentialCapturedCallback m_onCredentialCaptured;
     PacketCallback            m_onPacketReceived;
+    AssociationCallback       m_onAssociation;
+    uint32_t                  m_eapolCount;
+
+    // PCAP Logging
+    class PCAPWriter* m_pcapWriter;
 
     // Internal tick handlers
     void tickScan();
@@ -400,6 +421,6 @@ private:
     static BruceWiFi* s_instance;  // For static callback access
 };
 
-} // namespace Assessor
+} // namespace Vanguard
 
 #endif // ASSESSOR_BRUCE_WIFI_H

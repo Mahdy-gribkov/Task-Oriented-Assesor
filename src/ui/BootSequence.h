@@ -1,5 +1,5 @@
-#ifndef ASSESSOR_BOOT_SEQUENCE_H
-#define ASSESSOR_BOOT_SEQUENCE_H
+#ifndef VANGUARD_BOOT_SEQUENCE_H
+#define VANGUARD_BOOT_SEQUENCE_H
 
 /**
  * @file BootSequence.h
@@ -23,7 +23,7 @@
 #include <M5Cardputer.h>
 #include <cstdint>
 
-namespace Assessor {
+namespace Vanguard {
 
 /**
  * @brief Boot sequence animation states
@@ -106,6 +106,6 @@ private:
     bool checkSkipInput();
 };
 
-} // namespace Assessor
+} // namespace Vanguard
 
 #endif // ASSESSOR_BOOT_SEQUENCE_H

@@ -1,5 +1,5 @@
-#ifndef ASSESSOR_TARGET_TABLE_H
-#define ASSESSOR_TARGET_TABLE_H
+#ifndef VANGUARD_TARGET_TABLE_H
+#define VANGUARD_TARGET_TABLE_H
 
 /**
  * @file TargetTable.h
@@ -17,11 +17,11 @@
  * }
  */
 
-#include "Types.h"
+#include "VanguardTypes.h"
 #include <vector>
 #include <functional>
 
-namespace Assessor {
+namespace Vanguard {
 
 /**
  * @brief Sort criteria for target list
@@ -101,6 +101,19 @@ public:
     size_t pruneStale(uint32_t now);
 
     /**
+     * @brief Add a virtual/static target (e.g. Universal Remote)
+     */
+    bool addVirtualTarget(const char* name, TargetType type);
+
+    /**
+     * @brief Associate a client MAC with an Access Point MAC
+     * @param clientMac Client's MAC address
+     * @param apMac AP's BSSID
+     * @return true if association was new, false if already tracked
+     */
+    bool addAssociation(const uint8_t* clientMac, const uint8_t* apMac);
+
+    /**
      * @brief Clear all targets
      */
     void clear();
@@ -160,6 +173,6 @@ private:
     int findIndex(const uint8_t* bssid) const;
 };
 
-} // namespace Assessor
+} // namespace Vanguard
 
 #endif // ASSESSOR_TARGET_TABLE_H

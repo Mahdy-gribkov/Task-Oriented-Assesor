@@ -6,7 +6,7 @@
 #include "SettingsPanel.h"
 #include <M5Cardputer.h>
 
-namespace Assessor {
+namespace Vanguard {
 
 SettingsPanel::SettingsPanel()
     : m_visible(false)
@@ -251,4 +251,4 @@ bool SettingsPanel::getSoundEnabled() const {
     return m_settings[4].value != 0;
 }
 
-} // namespace Assessor
+} // namespace Vanguard

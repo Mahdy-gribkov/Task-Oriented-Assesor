@@ -8,9 +8,9 @@
 #include "TargetDetail.h"
 #include <M5Cardputer.h>
 
-namespace Assessor {
+namespace Vanguard {
 
-TargetDetail::TargetDetail(AssessorEngine& engine, const Target& target)
+TargetDetail::TargetDetail(VanguardEngine& engine, const Target& target)
     : m_engine(engine)
     , m_target(target)
     , m_state(DetailViewState::INFO)
@@ -299,9 +299,52 @@ void TargetDetail::renderInfo() {
     // Type
     const char* typeStr = (m_target.type == TargetType::ACCESS_POINT) ? "Access Point" :
                           (m_target.type == TargetType::STATION) ? "Client Station" :
-                          (m_target.type == TargetType::BLE_DEVICE) ? "BLE Device" : "Unknown";
-    renderInfoField(y, "Type:", typeStr);
-    y += 16;
+                          (m_target.type == TargetType::BLE_DEVICE) ? "BLE Device" : 
+                          (m_target.type == TargetType::IR_DEVICE) ? "Infrared Remote" : "Unknown";
+
+    // If IR, show different info
+    if (m_target.type == TargetType::IR_DEVICE) {
+        y = Theme::HEADER_HEIGHT + 6;
+        renderInfoField(y, "Type:", typeStr);
+        y += 12;
+        renderInfoField(y, "Frequency:", "38 kHz");
+        y += 12;
+        renderInfoField(y, "Protocol:", "Generic/Raw");
+        y += 12;
+    } else {
+        // ... (existing WiFi info)
+        renderInfoField(y, "Type:", typeStr);
+        y += 12;
+    }
+
+    // Clients
+    if (m_target.type == TargetType::ACCESS_POINT) {
+        char cliCountStr[16];
+        snprintf(cliCountStr, sizeof(cliCountStr), "%d detected", m_target.clientCount);
+        renderInfoField(y, "Clients:", cliCountStr);
+        y += 12;
+
+        if (m_target.clientCount > 0) {
+            m_canvas->setTextSize(1);
+            m_canvas->setTextColor(Theme::COLOR_TEXT_MUTED);
+            m_canvas->setTextDatum(TL_DATUM);
+            
+            // Show up to 3 client MACs
+            for (int i = 0; i < m_target.clientCount && i < 3; i++) {
+                char macStr[18];
+                snprintf(macStr, sizeof(macStr), " %02X:%02X:%02X:%02X:%02X:%02X",
+                         m_target.clientMacs[i][0], m_target.clientMacs[i][1], m_target.clientMacs[i][2],
+                         m_target.clientMacs[i][3], m_target.clientMacs[i][4], m_target.clientMacs[i][5]);
+                m_canvas->drawString(macStr, 70, y);
+                y += 10;
+            }
+            if (m_target.clientCount > 3) {
+                m_canvas->drawString(" ...", 70, y);
+                y += 10;
+            }
+        }
+    }
+    y += 4;
 
     // 5GHz warning if applicable
     if (m_target.channel > 14) {
@@ -532,4 +575,4 @@ void TargetDetail::transitionTo(DetailViewState newState) {
     m_state = newState;
 }
 
-} // namespace Assessor
+} // namespace Vanguard

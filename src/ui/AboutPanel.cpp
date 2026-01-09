@@ -6,7 +6,7 @@
 #include "AboutPanel.h"
 #include <M5Cardputer.h>
 
-namespace Assessor {
+namespace Vanguard {
 
 AboutPanel::AboutPanel()
     : m_visible(false)
@@ -67,13 +67,13 @@ void AboutPanel::render() {
     m_canvas->setTextSize(2);
     m_canvas->setTextDatum(MC_DATUM);
     m_canvas->setTextColor(Theme::COLOR_ACCENT);
-    m_canvas->drawString("VELORA", centerX, y);
+    m_canvas->drawString("VANGUARD", centerX, y);
     y += 24;
 
     // Version
     m_canvas->setTextSize(1);
     m_canvas->setTextColor(Theme::COLOR_TEXT_PRIMARY);
-    m_canvas->drawString("v0.1.0", centerX, y);
+    m_canvas->drawString(Theme::VERSION_STRING, centerX, y);
     y += 16;
 
     // Tagline
@@ -98,8 +98,11 @@ void AboutPanel::render() {
     m_canvas->drawString("ESP32-S3 / M5Stack Cardputer", centerX, y);
 
     // Footer - close hint
-    m_canvas->setTextColor(Theme::COLOR_ACCENT);
-    m_canvas->setTextDatum(BC_DATUM);
+    m_canvas->setTextColor(Theme::COLOR_TEXT_PRIMARY);
+    m_canvas->setTextDatum(TC_DATUM);
+    m_canvas->drawString("VANGUARD", Theme::SCREEN_WIDTH / 2, 8);
+    m_canvas->setTextColor(Theme::COLOR_ACCENT); // Restore color for the actual footer
+    m_canvas->setTextDatum(BC_DATUM); // Restore datum for the actual footer
     m_canvas->drawString("[Any key] Close", centerX, Theme::SCREEN_HEIGHT - 4);
 
     // Push to display
@@ -114,4 +117,4 @@ void AboutPanel::clearBack() {
     m_wantsBack = false;
 }
 
-} // namespace Assessor
+} // namespace Vanguard

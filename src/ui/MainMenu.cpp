@@ -6,7 +6,7 @@
 #include "MainMenu.h"
 #include <M5Cardputer.h>
 
-namespace Assessor {
+namespace Vanguard {
 
 MainMenu::MainMenu()
     : m_visible(false)
@@ -75,9 +75,9 @@ void MainMenu::render() {
     // Header with VELORA branding
     m_canvas->fillRect(1, 1, 158, 16, Theme::COLOR_SURFACE);
     m_canvas->setTextSize(1);
-    m_canvas->setTextColor(Theme::COLOR_ACCENT);
-    m_canvas->setTextDatum(MC_DATUM);
-    m_canvas->drawString("VELORA MENU", 80, 9);
+    m_canvas->setTextColor(Theme::COLOR_TEXT_PRIMARY);
+    m_canvas->setTextDatum(TC_DATUM);
+    m_canvas->drawString("VANGUARD", Theme::SCREEN_WIDTH / 2, 6);
 
     // Menu items
     int16_t y = 20;
@@ -135,4 +135,4 @@ MenuAction MainMenu::getAction() {
     return action;
 }
 
-} // namespace Assessor
+} // namespace Vanguard

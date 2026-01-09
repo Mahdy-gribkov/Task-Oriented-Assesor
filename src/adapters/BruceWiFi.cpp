@@ -7,10 +7,13 @@
  */
 
 #include "BruceWiFi.h"
-#include <esp_wifi.h>
+#include "../core/VanguardEngine.h"
+#include "../core/SDManager.h"
+#include "../core/PCAPWriter.h"
+#include <WiFi.h>
 #include <esp_err.h>
 
-namespace Assessor {
+namespace Vanguard {
 
 // Static instance for promiscuous callback
 BruceWiFi* BruceWiFi::s_instance = nullptr;
@@ -572,8 +575,10 @@ void BruceWiFi::stopAttack() {
     }
 
     setPromiscuous(false);
+    setPcapLogging(false); // Ensure PCAP closed
     m_state = WiFiAdapterState::IDLE;
     m_packetsSent = 0;
+    m_eapolCount = 0;
 }
 
 uint32_t BruceWiFi::getPacketsSent() const {
@@ -623,22 +628,114 @@ bool BruceWiFi::setPromiscuous(bool enable) {
 // PROMISCUOUS CALLBACK
 // =============================================================================
 
+void BruceWiFi::setPcapLogging(bool enabled, const char* filename) {
+    if (m_pcapWriter) {
+        m_pcapWriter->close();
+        delete m_pcapWriter;
+        m_pcapWriter = nullptr;
+    }
+
+    if (enabled && filename) {
+        m_pcapWriter = new PCAPWriter(filename);
+        if (!m_pcapWriter->open()) {
+            if (Serial) Serial.println("[WiFi] PCAP open failed!");
+            delete m_pcapWriter;
+            m_pcapWriter = nullptr;
+        } else {
+            if (Serial) Serial.printf("[WiFi] Logging to %s\n", filename);
+        }
+    }
+}
+
+void BruceWiFi::onAssociation(AssociationCallback cb) {
+    m_onAssociation = cb;
+}
+
 void BruceWiFi::promiscuousCallback(void* buf, wifi_promiscuous_pkt_type_t type) {
     if (!s_instance) return;
 
     wifi_promiscuous_pkt_t* pkt = (wifi_promiscuous_pkt_t*)buf;
-    const uint8_t* payload = pkt->payload;
+    uint8_t* payload = pkt->payload;
     uint16_t len = pkt->rx_ctrl.sig_len;
     int8_t rssi = pkt->rx_ctrl.rssi;
+
+    // [PHASE 3.3] PCAP Logging
+    if (s_instance->m_pcapWriter) {
+        s_instance->m_pcapWriter->writePacket(payload, len);
+    }
 
     // Forward to packet callback if registered
     if (s_instance->m_onPacketReceived) {
         s_instance->m_onPacketReceived(payload, len, rssi);
     }
 
-    // TODO: EAPOL detection for handshake capture
-    // Check for EAPOL frames (type 0x888E)
-    // If all 4 EAPOL messages seen, mark handshake captured
+    // [PHASE 3.1] Client Discovery Implementation
+    // We only care about Data frames for client discovery
+    if (type == WIFI_PKT_DATA) {
+        wifi_data_frame_header_t* header = (wifi_data_frame_header_t*)payload;
+        
+        // Extract Frame Control bits
+        uint16_t fc = header->frame_control;
+        bool toDs = (fc & 0x0100) != 0;
+        bool fromDs = (fc & 0x0200) != 0;
+
+        // In 802.11 Data Frames:
+        // ToDS=0, FromDS=0: Addr1=Dst, Addr2=Src (Client), Addr3=BSSID (AP)
+        // ToDS=1, FromDS=0: Addr1=BSSID (AP), Addr2=Src (Client), Addr3=Dst
+        // ToDS=0, FromDS=1: Addr1=Dst, Addr2=BSSID (AP), Addr3=Src (Client)
+        // ToDS=1, FromDS=1: WDS (Ignore)
+
+        const uint8_t* clientMac = nullptr;
+        const uint8_t* apMac = nullptr;
+
+        if (!toDs && !fromDs) {
+            clientMac = header->addr2;
+            apMac = header->addr3;
+        } else if (toDs && !fromDs) {
+            clientMac = header->addr2;
+            apMac = header->addr1;
+        } else if (!toDs && fromDs) {
+            clientMac = header->addr3;
+            apMac = header->addr2;
+        }
+
+        // If we found a valid mapping, send to association callback
+        if (clientMac && apMac && s_instance->m_onAssociation) {
+            // Check if client is not broadcast/multicast
+            if (!(clientMac[0] & 0x01)) {
+                s_instance->m_onAssociation(clientMac, apMac);
+            }
+        }
+    }
+
+    // [PHASE 3.3] Handshake Capture
+    // EAPOL Detection
+    if (type == WIFI_PKT_DATA) {
+        // EtherType for EAPOL is 0x888e
+        // In 802.11 Data frames, the payload starts after the header
+        // For QoS Data, header is 26 bytes. For Data, header is 24 bytes.
+        // But wifi_data_frame_header_t handles basic fields.
+        // SNAP header (8 bytes) usually precedes the EAPOL payload.
+        // Index 24-25 is often the length/type in some captures, but 
+        // 802.11 stack usually gives us the 802.2 LLC/SNAP header.
+        
+        // Simpler check: EAPOL frames are small and have a specific structure.
+        // We look for 0x88 0x8e in the payload.
+        for (int i = 0; i < len - 1; i++) {
+            if (payload[i] == 0x88 && payload[i+1] == 0x8e) {
+                // Found potential EAPOL!
+                s_instance->m_eapolCount++;
+                
+                if (s_instance->m_onHandshakeCaptured) {
+                    // In a real handshake, we'd captures multiple parts. 
+                    // For now, signal that we saw EAPOL for this BSSID.
+                    wifi_data_frame_header_t* header = (wifi_data_frame_header_t*)payload;
+                    s_instance->m_onHandshakeCaptured(header->addr3); // Addr3 is BSSID
+                }
+                break;
+            }
+        }
+    }
 }
 
-} // namespace Assessor
+} // namespace Vanguard

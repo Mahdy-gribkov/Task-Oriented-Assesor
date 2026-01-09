@@ -1,5 +1,5 @@
-#ifndef ASSESSOR_TARGET_DETAIL_H
-#define ASSESSOR_TARGET_DETAIL_H
+#ifndef VANGUARD_TARGET_DETAIL_H
+#define VANGUARD_TARGET_DETAIL_H
 
 /**
  * @file TargetDetail.h
@@ -23,12 +23,12 @@
  */
 
 #include <M5Cardputer.h>
-#include "../core/Types.h"
-#include "../core/AssessorEngine.h"
+#include "../core/VanguardTypes.h"
+#include "../core/VanguardEngine.h"
 #include "Theme.h"
 #include <vector>
 
-namespace Assessor {
+namespace Vanguard {
 
 /**
  * @brief View state within target detail
@@ -48,7 +48,7 @@ public:
      * @param engine The assessor engine
      * @param target The target to display
      */
-    TargetDetail(AssessorEngine& engine, const Target& target);
+    TargetDetail(VanguardEngine& engine, const Target& target);
     ~TargetDetail();
 
     // -------------------------------------------------------------------------
@@ -143,7 +143,7 @@ public:
     const Target& getTarget() const;
 
 private:
-    AssessorEngine&             m_engine;
+    VanguardEngine&             m_engine;
     Target                      m_target;
 
     // State
@@ -180,6 +180,6 @@ private:
     void transitionTo(DetailViewState newState);
 };
 
-} // namespace Assessor
+} // namespace Vanguard
 
 #endif // ASSESSOR_TARGET_DETAIL_H

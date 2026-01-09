@@ -1,8 +1,8 @@
-#ifndef ASSESSOR_TYPES_H
-#define ASSESSOR_TYPES_H
+#ifndef VANGUARD_TYPES_H
+#define VANGUARD_TYPES_H
 
 /**
- * @file Types.h
+ * @file VanguardTypes.h
  * @brief Core data types for The Assessor
  *
  * Defines all shared enums, structs, and type aliases used across
@@ -12,7 +12,7 @@
 #include <Arduino.h>
 #include <cstdint>
 
-namespace Assessor {
+namespace Vanguard {
 
 // =============================================================================
 // CONSTANTS
@@ -45,7 +45,8 @@ enum class TargetType : uint8_t {
     STATION,          // WiFi Client device
     BLE_DEVICE,       // Bluetooth LE device
     BLE_BEACON,       // iBeacon/Eddystone
-    RF_DEVICE         // Sub-GHz device (if supported)
+    RF_DEVICE,        // Sub-GHz device (if supported)
+    IR_DEVICE         // Infrared device
 };
 
 /**
@@ -67,6 +68,7 @@ enum class SecurityType : uint8_t {
 enum class ScanState : uint8_t {
     IDLE,
     WIFI_SCANNING,
+    TRANSITIONING_TO_BLE,  // Non-blocking WiFi→BLE transition
     BLE_SCANNING,
     COMPLETE,
     ERROR
@@ -131,6 +133,47 @@ enum class SignalStrength : uint8_t {
 };
 
 // =============================================================================
+// WIFI FRAME STRUCTURES (802.11)
+// =============================================================================
+
+/**
+ * @brief Simplified 802.11 Frame Control field
+ */
+struct wifi_frame_control_t {
+    uint16_t protocol : 2;
+    uint16_t type : 2;
+    uint16_t subtype : 4;
+    uint16_t to_ds : 1;
+    uint16_t from_ds : 1;
+    uint16_t more_frag : 1;
+    uint16_t retry : 1;
+    uint16_t pwr_mgmt : 1;
+    uint16_t more_data : 1;
+    uint16_t protected_frame : 1;
+    uint16_t order : 1;
+};
+
+/**
+ * @brief Basic 802.11 Data Frame Header (3-address)
+ */
+struct wifi_data_frame_header_t {
+    uint16_t frame_control;
+    uint16_t duration;
+    uint8_t  addr1[6]; // RA / Destination
+    uint8_t  addr2[6]; // TA / Source (Client if FromDS=0)
+    uint8_t  addr3[6]; // BSSID (if FromDS=0)
+    uint16_t seq_ctrl;
+};
+
+// Frame types
+constexpr uint8_t WIFI_TYPE_MGMT = 0x00;
+constexpr uint8_t WIFI_TYPE_DATA = 0x02;
+
+// Subtypes
+constexpr uint8_t WIFI_SUBTYPE_DATA = 0x00;
+constexpr uint8_t WIFI_SUBTYPE_QOS_DATA = 0x08;
+
+// =============================================================================
 // DATA STRUCTURES
 // =============================================================================
 
@@ -155,6 +198,7 @@ struct Target {
 
     // State (for context-aware actions)
     uint8_t      clientCount;                // Connected clients (APs only)
+    uint8_t      clientMacs[MAX_CLIENTS_PER_AP][6]; // Track specific clients
     bool         isHidden;                   // Hidden SSID
     bool         hasHandshake;               // We captured a handshake
 
@@ -167,6 +211,29 @@ struct Target {
 
     bool hasClients() const {
         return clientCount > 0;
+    }
+
+    /**
+     * @brief Check if a client is already tracked
+     */
+    bool hasClient(const uint8_t* mac) const {
+        for (uint8_t i = 0; i < clientCount && i < MAX_CLIENTS_PER_AP; i++) {
+            if (memcmp(clientMacs[i], mac, 6) == 0) return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Add a client to the list if not already present
+     */
+    bool addClientMac(const uint8_t* mac) {
+        if (hasClient(mac)) return false;
+        if (clientCount < MAX_CLIENTS_PER_AP) {
+            memcpy(clientMacs[clientCount], mac, 6);
+            clientCount++;
+            return true;
+        }
+        return false;
     }
 
     bool isOpen() const {
@@ -221,6 +288,6 @@ struct ActionProgress {
     const char*  statusText;   // "Sending deauth frames..."
 };
 
-} // namespace Assessor
+} // namespace Vanguard
 
-#endif // ASSESSOR_TYPES_H
+#endif // ASSESSOR_VanguardTypes.h

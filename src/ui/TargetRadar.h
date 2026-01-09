@@ -1,5 +1,5 @@
-#ifndef ASSESSOR_TARGET_RADAR_H
-#define ASSESSOR_TARGET_RADAR_H
+#ifndef VANGUARD_TARGET_RADAR_H
+#define VANGUARD_TARGET_RADAR_H
 
 /**
  * @file TargetRadar.h
@@ -27,12 +27,12 @@
  */
 
 #include <M5Cardputer.h>
-#include "../core/Types.h"
-#include "../core/AssessorEngine.h"
+#include "../core/VanguardTypes.h"
+#include "../core/VanguardEngine.h"
 #include "Theme.h"
 #include <vector>
 
-namespace Assessor {
+namespace Vanguard {
 
 class TargetRadar {
 public:
@@ -40,7 +40,7 @@ public:
      * @brief Construct radar view
      * @param engine Reference to the assessor engine for data
      */
-    explicit TargetRadar(AssessorEngine& engine);
+    explicit TargetRadar(VanguardEngine& engine);
     ~TargetRadar();
 
     // -------------------------------------------------------------------------
@@ -160,7 +160,7 @@ public:
     void setAutoRefresh(bool enabled);
 
 private:
-    AssessorEngine&      m_engine;
+    VanguardEngine&      m_engine;
 
     // State
     std::vector<Target>  m_targets;         // Cached, filtered list
@@ -213,6 +213,6 @@ private:
     void ensureHighlightVisible();
 };
 
-} // namespace Assessor
+} // namespace Vanguard
 
 #endif // ASSESSOR_TARGET_RADAR_H
