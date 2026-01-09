@@ -85,11 +85,11 @@ private:
     uint8_t   m_fadeLevel;       // 0-255 for animations
 
     // Phase durations (ms)
-    static constexpr uint32_t LOGO_FADE_DURATION    = 500;
-    static constexpr uint32_t TAGLINE_FADE_DURATION = 500;
-    static constexpr uint32_t HOLD_DURATION         = 1000;
-    static constexpr uint32_t ONBOARDING_DURATION   = 3000;  // Or until tap
-    static constexpr uint32_t FADE_OUT_DURATION     = 300;
+    static constexpr uint32_t LOGO_FADE_DURATION    = 300;
+    static constexpr uint32_t TAGLINE_FADE_DURATION = 300;
+    static constexpr uint32_t HOLD_DURATION         = 500;
+    static constexpr uint32_t ONBOARDING_DURATION   = 1000;
+    static constexpr uint32_t FADE_OUT_DURATION     = 200;
 
     // Rendering helpers
     void renderLogoFadeIn();

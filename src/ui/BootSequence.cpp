@@ -219,6 +219,9 @@ void BootSequence::advancePhase() {
             break;
     }
 
+    if (Serial) {
+        Serial.printf("[BOOT] Advancing to phase %d\n", (int)m_phase);
+    }
     m_phaseStartMs = millis();
     m_fadeLevel = 0;
 }

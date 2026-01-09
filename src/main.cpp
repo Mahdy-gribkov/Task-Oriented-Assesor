@@ -56,7 +56,7 @@ enum class AppState {
 
 static AppState g_state = AppState::BOOTING;
 static uint32_t g_lastKeyMs = 0;  // Debounce
-static constexpr uint32_t KEY_DEBOUNCE_MS = 150;
+static constexpr uint32_t KEY_DEBOUNCE_MS = 50;
 static bool g_consumeNextInput = false;  // Prevents key "bleed-through" after menu actions
 
 // =============================================================================
@@ -166,6 +166,7 @@ void loop() {
         case AppState::BOOTING:
             g_boot->tick();
             if (g_boot->isComplete()) {
+                if (Serial) Serial.println(F("[VANGUARD] Boot complete. Showing Scan Selector."));
                 // Transition to scan selection screen
                 g_scanSelector->show();
                 g_state = AppState::READY_TO_SCAN;
@@ -340,6 +341,10 @@ void handleKeyboardInput() {
     // Always check for pressed keys - isChange() can be unreliable
     if (!M5Cardputer.Keyboard.isPressed()) {
         return;  // No keys pressed
+    }
+
+    if (Serial) {
+        Serial.printf("[INPUT] Key pressed at state %d\n", (int)g_state);
     }
 
     // Debounce - prevent rapid-fire key events
