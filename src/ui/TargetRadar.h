@@ -205,9 +205,6 @@ private:
     void drawSecurityBadge(int x, int y, SecurityType security);
     void drawClientCount(int x, int y, uint8_t count);
 
-    // Input handling
-    void handleInput();
-
     // List management
     void updateTargetList();
     void ensureHighlightVisible();

@@ -52,8 +52,6 @@ TargetRadar::~TargetRadar() {
 // =============================================================================
 
 void TargetRadar::tick() {
-    handleInput();
-
     // Auto-refresh target list
     if (m_autoRefresh) {
         uint32_t now = millis();
@@ -82,7 +80,7 @@ void TargetRadar::render() {
     m_canvas->setTextSize(1);
     m_canvas->setTextColor(Theme::COLOR_ACCENT);
     m_canvas->setTextDatum(TL_DATUM);
-    m_canvas->drawString("VELORA RADAR", 4, 3);
+    m_canvas->drawString("VANGUARD RADAR", 4, 3);
 
     // Count WiFi and BLE targets
     int wifiCount = 0, bleCount = 0;
@@ -527,14 +525,6 @@ void TargetRadar::drawSecurityBadge(int x, int y, SecurityType security) {
 
 void TargetRadar::drawClientCount(int x, int y, uint8_t count) {
     // Now inlined in renderTargetItemToCanvas
-}
-
-// =============================================================================
-// INPUT HANDLING
-// =============================================================================
-
-void TargetRadar::handleInput() {
-    // Keyboard input is now handled in main.cpp handleKeyboardInput()
 }
 
 // =============================================================================

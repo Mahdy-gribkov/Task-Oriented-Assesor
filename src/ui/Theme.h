@@ -1,9 +1,9 @@
-#ifndef VELORA_THEME_H
-#define VELORA_THEME_H
+#ifndef VANGUARD_THEME_H
+#define VANGUARD_THEME_H
 
 /**
  * @file Theme.h
- * @brief Visual constants for Velora UI
+ * @brief Visual constants for Vanguard UI
  *
  * PINKISH-ORANGE THEME
  * All colors, fonts, spacing, and sizing live here.
@@ -25,7 +25,7 @@ constexpr int16_t SCREEN_WIDTH  = 240;
 constexpr int16_t SCREEN_HEIGHT = 135;
 
 // =============================================================================
-// COLOR PALETTE - VELORA PINKISH-ORANGE
+// COLOR PALETTE - Vanguard PINKISH-ORANGE
 // =============================================================================
 
 // Background colors
@@ -155,4 +155,4 @@ inline uint16_t getSecurityColor(uint8_t securityType) {
 
 } // namespace Vanguard
 
-#endif // VELORA_THEME_H
+#endif // VANGUARD_THEME_H

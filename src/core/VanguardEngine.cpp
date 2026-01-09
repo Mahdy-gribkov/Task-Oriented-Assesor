@@ -71,13 +71,11 @@ bool VanguardEngine::init() {
     // Step 1: Clean shutdown any existing WiFi state
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
-
-    // Distributed delays with watchdog feeding
-    for (int i = 0; i < 5; i++) { yield(); delay(20); }
+    for (int i = 0; i < 10; i++) { yield(); delay(20); } // 200ms off
 
     // Step 2: Set station mode
     WiFi.mode(WIFI_STA);
-    for (int i = 0; i < 5; i++) { yield(); delay(20); }
+    for (int i = 0; i < 10; i++) { yield(); delay(20); } // 200ms to settle
 
     // Step 3: Delete any old scan results
     WiFi.scanDelete();
@@ -289,10 +287,9 @@ void VanguardEngine::beginWiFiScan() {
         m_onScanProgress(m_scanState, m_scanProgress);
     }
 }
-
 void VanguardEngine::beginBLEScan() {
     if (Serial) {
-        Serial.println("[BLE] Starting BLE-only scan...");
+        Serial.println("[BLE] Starting non-blocking BLE-only scan...");
     }
 
     m_targetTable.clear();
@@ -300,35 +297,11 @@ void VanguardEngine::beginBLEScan() {
     m_scanStartMs = millis();
     m_combinedScan = false;
 
-    // Feed watchdog before BLE operations
-    for (int i = 0; i < 10; i++) { yield(); delay(10); }
-
-    BruceBLE& ble = BruceBLE::getInstance();
-
-    // Try init with proper delays
-    bool bleInitOk = false;
-    for (int attempt = 0; attempt < 2; attempt++) {
-        for (int i = 0; i < 5; i++) { yield(); delay(10); }
-
-        bleInitOk = ble.init();
-        if (bleInitOk) break;
-
-        if (Serial) {
-            Serial.printf("[BLE] Init attempt %d failed\n", attempt + 1);
-        }
-    }
-
-    if (!bleInitOk) {
-        if (Serial) {
-            Serial.println("[BLE] Init failed!");
-        }
-        m_scanState = ScanState::COMPLETE;
-        m_scanProgress = 100;
-        return;
-    }
-
-    m_scanState = ScanState::BLE_SCANNING;
-    ble.beginScan(5000);
+    // Start non-blocking initiation of BLE
+    m_scanState = ScanState::TRANSITIONING_TO_BLE;
+    m_transitionStep = 2; // Jump to step 2 (BLE shutdown/init)
+    m_transitionStartMs = millis();
+    m_bleInitAttempts = 0;
 
     if (m_onScanProgress) {
         m_onScanProgress(m_scanState, m_scanProgress);

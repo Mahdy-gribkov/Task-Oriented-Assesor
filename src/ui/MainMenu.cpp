@@ -72,7 +72,7 @@ void MainMenu::render() {
     m_canvas->fillScreen(Theme::COLOR_BACKGROUND);
     m_canvas->drawRect(0, 0, 160, 100, Theme::COLOR_ACCENT);
 
-    // Header with VELORA branding
+    // Header with Vanguard branding
     m_canvas->fillRect(1, 1, 158, 16, Theme::COLOR_SURFACE);
     m_canvas->setTextSize(1);
     m_canvas->setTextColor(Theme::COLOR_TEXT_PRIMARY);

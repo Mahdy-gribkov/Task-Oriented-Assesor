@@ -1,6 +1,6 @@
 /**
  * @file ScanSelector.cpp
- * @brief Velora - Post-boot scan type selection screen
+ * @brief Vanguard - Post-boot scan type selection screen
  * PINKISH-ORANGE THEME
  */
 
@@ -78,11 +78,11 @@ void ScanSelector::render() {
         m_canvas->drawPixel(logoX + 23 - i, logoY + i, Theme::COLOR_ACCENT);
     }
 
-    // Title - VELORA in coral
+    // Title - Vanguard in coral
     m_canvas->setTextSize(2);
     m_canvas->setTextColor(Theme::COLOR_ACCENT);
     m_canvas->setTextDatum(TC_DATUM);
-    m_canvas->drawString("VELORA", Theme::SCREEN_WIDTH / 2, 22);
+    m_canvas->drawString("Vanguard", Theme::SCREEN_WIDTH / 2, 22);
 
     // Subtitle with blinking cursor
     m_canvas->setTextSize(1);

@@ -200,7 +200,7 @@ void loop() {
                 g_state = AppState::RADAR;
             }
             // Allow cancel with Q or Backspace
-            if (M5Cardputer.Keyboard.isKeyPressed('q') || M5Cardputer.Keyboard.isKeyPressed(KEY_BACKSPACE)) {
+            if (M5Cardputer.Keyboard.isKeyPressed('q') || M5Cardputer.Keyboard.isKeyPressed('Q') || M5Cardputer.Keyboard.isKeyPressed(KEY_BACKSPACE)) {
                 g_engine->stopScan();
                 g_state = AppState::RADAR;
             }
@@ -395,7 +395,15 @@ void handleKeyboardInput() {
         if (M5Cardputer.Keyboard.isKeyPressed('r') || M5Cardputer.Keyboard.isKeyPressed('R')) {
             g_engine->beginScan();
             g_state = AppState::SCANNING;
-            if (Serial) Serial.println(F("[Assessor] Rescan triggered"));
+            if (Serial) Serial.println(F("[VANGUARD] Rescan triggered"));
+            return;
+        }
+        // 'Q' - Back to Scan Selector
+        if (M5Cardputer.Keyboard.isKeyPressed('q') || M5Cardputer.Keyboard.isKeyPressed('Q')) {
+            g_engine->stopScan();
+            g_radar->scrollToTop();
+            g_scanSelector->show();
+            g_state = AppState::READY_TO_SCAN;
             return;
         }
     }
