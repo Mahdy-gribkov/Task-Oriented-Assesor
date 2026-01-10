@@ -13,6 +13,7 @@
 #include <esp_task_wdt.h>
 #include "core/VanguardEngine.h"
 #include "core/SystemTask.h"
+#include "ui/SafeMode.h"
 #include "ui/BootSequence.h"
 #include "ui/ScanSelector.h"
 #include "ui/TargetRadar.h"
@@ -144,6 +145,13 @@ void setup() {
     M5Cardputer.Display.fillScreen(Theme::COLOR_BACKGROUND);
     M5Cardputer.Display.setTextColor(Theme::COLOR_TEXT_PRIMARY);
     M5Cardputer.Display.setFont(&fonts::Font0);
+
+    // KEY CHECK: Safe Mode
+    // Check if G0 (BtnA) is held during boot
+    M5Cardputer.update();
+    if (M5Cardputer.BtnA.isPressed()) {
+        SafeMode::run(); // Blocks forever
+    }
 
     // Start Background System Task (Core 0)
     // This handles all WiFi/BLE operations to prevent UI freezing
