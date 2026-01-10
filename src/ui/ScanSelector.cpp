@@ -112,6 +112,25 @@ void ScanSelector::render() {
     m_canvas->setTextColor(Theme::COLOR_ACCENT);
     m_canvas->setTextDatum(MC_DATUM);
     m_canvas->drawString("[M] Menu", Theme::SCREEN_WIDTH / 2, Theme::SCREEN_HEIGHT - 7);
+    
+    // Draw Version String (Bottom Right)
+    m_canvas->setTextDatum(BR_DATUM);
+    m_canvas->setTextColor(Theme::COLOR_TEXT_SECONDARY);
+    m_canvas->drawString(Theme::VERSION_STRING, Theme::SCREEN_WIDTH - 2, Theme::SCREEN_HEIGHT - 2);
+
+    // DEBUG: RAW INPUT MONITOR
+    // Shows raw key data to separate hardware issues from logic issues
+    bool pressed = M5Cardputer.Keyboard.isPressed();
+    if (pressed) {
+        m_canvas->setTextDatum(BL_DATUM);
+        m_canvas->setTextColor(Theme::COLOR_ACCENT_BRIGHT);
+        String debugStr = "HW: OK ";
+        if (M5Cardputer.Keyboard.isKeyPressed('r') || M5Cardputer.Keyboard.isKeyPressed('R')) debugStr += "[R]";
+        if (M5Cardputer.Keyboard.isKeyPressed('b') || M5Cardputer.Keyboard.isKeyPressed('B')) debugStr += "[B]";
+        if (M5Cardputer.Keyboard.isKeyPressed(KEY_ENTER)) debugStr += "[ENT]";
+        
+        m_canvas->drawString(debugStr, 2, Theme::SCREEN_HEIGHT - 2);
+    }
 
     m_canvas->pushSprite(0, 0);
 }

@@ -11,6 +11,8 @@
 #include "SDManager.h"
 #include "RadioWarden.h"
 #include "../ui/FeedbackManager.h"
+#include "../ui/FeedbackManager.h"
+#include <M5Cardputer.h>
 #include <WiFi.h>
 
 namespace Vanguard {
@@ -61,12 +63,15 @@ bool VanguardEngine::init() {
     }
 
     // Initialize Init-Once hardware
-    BruceBLE::getInstance().init();
+    // BruceBLE::getInstance().init(); // REMOVED: Truly Lazy now (see BruceBLE::onEnable)
     BruceIR::getInstance().init();
 
-    // Start in Station mode by default
-    RadioWarden::getInstance().requestRadio(RadioOwner::OWNER_WIFI_STA);
-
+    // REVERT: WiFi Init causes boot loop. Disabling again.
+    // REVERT: WiFi Init causes boot loop. Disabling again.
+    // M5Cardputer.Display.println("Engine: Warden [LAZY]");
+    // RadioWarden::getInstance().requestRadio(RadioOwner::OWNER_WIFI_STA); 
+    // RadioWarden::getInstance().requestRadio(RadioOwner::OWNER_WIFI_STA); 
+    
     m_initialized = true;
 
     // Step 5: Initialize SD Card

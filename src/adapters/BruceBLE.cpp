@@ -47,6 +47,12 @@ BruceBLE::~BruceBLE() {
 
 bool BruceBLE::onEnable() {
     if (m_enabled) return true;
+
+    // LAZY INIT: Ensure stack is up before enabling
+    if (!m_initialized) {
+        if (Serial) Serial.println("[BLE] Lazy Initializing...");
+        init();
+    }
     
     if (RadioWarden::getInstance().requestRadio(RadioOwner::OWNER_BLE)) {
         m_enabled = true;
@@ -85,9 +91,9 @@ bool BruceBLE::init() {
             m_scanCallbacks = new ScanCallbacks(this);
         }
         m_scanner->setAdvertisedDeviceCallbacks(m_scanCallbacks);
-        m_scanner->setActiveScan(true);
-        m_scanner->setInterval(100);
-        m_scanner->setWindow(99);
+        // m_scanner->setActiveScan(true); // MOVED to onEnable/tick
+        // m_scanner->setInterval(100);
+        // m_scanner->setWindow(99);
     }
 
     m_advertising = NimBLEDevice::getAdvertising();

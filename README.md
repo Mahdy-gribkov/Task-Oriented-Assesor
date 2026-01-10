@@ -1,100 +1,87 @@
-# VANGUARD Alpha 1.1
-> **Target First. Always.**
+<div align="center">
+  
+  <h1>🛡️ VANGUARD</h1>
+  <h3>Target-First Wireless Auditing Suite for M5Cardputer</h3>
 
-[![Build VANGUARD Firmware](https://github.com/Mahdy-gribkov/Task-Oriented-Assesor/actions/workflows/build.yml/badge.svg)](https://github.com/Mahdy-gribkov/Task-Oriented-Assesor/actions/workflows/build.yml)
-[![Rolling Release](https://img.shields.io/badge/Release-Rolling_Alpha-orange)](https://github.com/Mahdy-gribkov/Task-Oriented-Assesor/releases/tag/rolling-alpha)
+  <p>
+    <a href="https://github.com/Mahdy-gribkov/Task-Oriented-Assesor/actions"><img src="https://img.shields.io/github/actions/workflow/status/Mahdy-gribkov/Task-Oriented-Assesor/build.yml?style=for-the-badge&label=BUILD" alt="Build Status"></a>
+    <img src="https://img.shields.io/badge/Platform-ESP32--S3-blue?style=for-the-badge&logo=espressif" alt="Platform ESP32">
+    <img src="https://img.shields.io/badge/Version-v1.1--ALPHA-orange?style=for-the-badge" alt="Version">
+    <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License">
+  </p>
 
-VANGUARD is a tactical wireless auditing suite for the **M5Stack Cardputer**. It reverses the traditional "Attack -> Target" workflow, putting discovery first. See the field, pick your mark, and deploy.
+  <p><b>Turn your M5Cardputer into a pocket-sized cyber-swiss-army-knife.</b></p>
+  <p><i>Standard wireless tools focus on lists. Vanguard focuses on <br><b>TARGETS</b>.</i></p>
 
----
-
-## ⚡ Alpha 1.1: "The RadioWarden Update"
-
-This iteration brings significant architectural stability and tactile feedback to the platform:
-
-- **🛡️ RadioWarden**: Centralized radio arbitrator. No more "Radio Silence" bugs. Handlers ensure clean handovers between WiFi and BLE protocols.
-- **☢️ Geiger Counter**: Real-time audio/haptic feedback. The closer you get to a target, the faster it clicks. Digital signal strength felt through the buzzer.
-- **📜 Buffered PCAP**: Asynchronous packet logging. Write full handshakes to SD at high speed without dropping UI frames.
-- **🚀 Rolling Releases**: Every commit is now automatically built and released to GitHub for instant deployment.
+</div>
 
 ---
 
-## 🎮 Operative Controls
+## ⚡ Features
 
-| Input | Tactical Action |
-|-------|-----------------|
-| **`M`** | **Inventory/Menu** |
-| **`R`** | **WiFi Pulse (Scan)** |
-| **`B`** | **BLE Echo (Scan)** |
-| **`Enter`** / **`E`** | **Deploy / Select** |
-| **`;`** / **`,`** | **Navigate Up** |
-| **`.`** / **`/`** | **Navigate Down** |
-| **`Q`** / **`Back`** | **Extract / Back** |
+### 📡 Target-Oriented Warfare
+Why scroll through 100 APs when you only care about one?
+- **Lock On**: Select a target via WiFi or BLE MAC.
+- **Focus Fire**: All tools (Deauth, Probe Sniff, Beacon Spam) auto-target your selection.
+- **Persistence**: Remembers targets across reboots.
+
+### 🔍 Bruce-Powered Core
+Built on the legendary **Bruce** firmware logic, instantiated for specific tactical needs.
+- **Hybrid Scanning**: Simultaneous WiFi + BLE reconnaissance.
+- **Lazy Loading**: Zero-latency boot; heavy radios only initialize when you pull the trigger.
+- **Visual Feedback**: Real-time RSSI radar and signal strength graphing.
+
+### 🎨 Premium "Dark Mode" UI
+- **Zero-Flicker**: Double-buffered display rendering.
+- **Glitch Aesthetics**: Cyberpunk-inspired transitions and boot sequences.
+- **Haptic Feedback**: Feel the packets.
 
 ---
 
-## 🛠️ Field Deployment
+## 🚀 Getting Started
 
-### 1. Requirements
-- M5Stack Cardputer (ESP32-S3)
-- MicroSD Card (for PCAP logging)
-- PlatformIO (CLI or VS Code)
+### Prerequisites
+- **M5Stack Cardputer** (ESP32-S3)
+- SD Card (Optional, for PCAP storage)
 
-### 2. Quick Start
-```powershell
-# Quick Build & Flash
+### Installation (The Easy Way)
+1.  Go to **[Releases](https://github.com/Mahdy-gribkov/Task-Oriented-Assesor/releases)**.
+2.  Download the latest `firmware.bin`.
+3.  Flash using [M5Burner](https://m5stack.com/pages/download) or [Esptool](https://github.com/espressif/esptool).
+
+### Installation (The "Genius" Way)
+Clone the repo and build it yourself.
+```bash
+git clone https://github.com/Mahdy-gribkov/Task-Oriented-Assesor.git
+cd Task-Oriented-Assesor
 pio run -t upload
 ```
 
-### 3. M5Burner (Coming Soon)
-VANGUARD Alpha 1.1 uses a custom 8MB partition table with dual OTA slots, ready for the M5Burner ecosystem.
+---
+
+## 🎮 Controls
+
+| Key | Action | Context |
+| :--- | :--- | :--- |
+| **Starts** | **Boot** | Power On / Reset |
+| `R` | **WiFi Scan** | Scan Selector |
+| `B` | **BLE Scan** | Scan Selector |
+| `Enter` | **Select / Attack** | Menus & Radar |
+| `M` | **Main Menu** | Global |
+| `Q` / `Bksp` | **Back / Cancel** | Menus |
+| `Arrows` | **Navigate** | Radar / Target List |
 
 ---
 
-## 📡 Arsenal (Attacks)
-
-### WiFi Operations
-- **Deauth All/Single**: Disconnect targets from their access points.
-- **Evil Twin**: Clone an AP and intercept credentials (requires SD).
-- **Beacon Flood**: Saturate the air with 50+ fake network SSIDs.
-- **PMKID Capture**: Invisible handshake extraction for offline cracking.
-
-### BLE Operations
-- **Spam**: Flood Apple, Android, and Windows devices with pairing popups.
-- **Sour Apple**: Disruption attack targeting iOS/macOS devices.
-- **Skimmer Detect**: Identify suspicious BLE signatures common in skimmers.
+## 🛠️ Roadmap (Alpha 1.x)
+- [x] **Core Engine**: Lazy Loading & Stability
+- [x] **Input System**: Native driver handling
+- [ ] **PCAP Buffering**: Save handshakes to SD
+- [ ] **BadUSB**: HID Rubber Ducky scripts
+- [ ] **IR Blaster**: Universal Remote (Learning Mode)
 
 ---
 
-## 🏗️ Architecture
-
-```mermaid
-graph TD
-    A[User Input] --> B[VanguardEngine]
-    B --> C[RadioWarden]
-    C --> D{Radio Hardware}
-    D -->|WiFi| E[BruceWiFi]
-    D -->|BLE| F[BruceBLE]
-    B --> G[FeedbackManager]
-    G --> H[Geiger Counter/Buzzer]
-    E --> I[PCAPWriter]
-    I --> J[SD Card]
-```
-
----
-
-## ⚠️ Tactical Warning
-
-**This tool is for authorized security testing only.**
-Unauthorized access to wireless networks is a felony in many jurisdictions. The developers assume no liability for misuse.
-**If you can't hack responsibly, don't hack at all.**
-
----
-
-## 📜 Credits & License
-Built on the shoulders of:
-- **[Bruce](https://github.com/pr3y/Bruce)** (Core Logic)
-- **M5Unified** (Hardware HAL)
-- **NimBLE-Arduino** (Stack)
-
-License: **GPL-3.0**
+<div align="center">
+  <i>Crafted with 💀 by the Vanguard Team</i>
+</div>

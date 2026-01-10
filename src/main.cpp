@@ -43,6 +43,7 @@ static SettingsPanel*  g_settings     = nullptr;
 static AboutPanel*     g_about        = nullptr;
 
 enum class AppState {
+    INITIALIZING,    // New state for lazy loading
     BOOTING,
     READY_TO_SCAN,   // Post-boot scan type selection
     SCANNING,
@@ -54,8 +55,9 @@ enum class AppState {
     ERROR
 };
 
-static AppState g_state = AppState::BOOTING;
+static AppState g_state = AppState::INITIALIZING;
 static uint32_t g_lastKeyMs = 0;  // Debounce
+#include <Wire.h>
 static constexpr uint32_t KEY_DEBOUNCE_MS = 50;
 static bool g_consumeNextInput = false;  // Prevents key "bleed-through" after menu actions
 
@@ -70,7 +72,42 @@ void setAppState(AppState newState) {
 // SETUP
 // =============================================================================
 
+// MANUAL I2C RECOVERY
+// Toggles SCL to release stuck slaves
+void recoverI2C() {
+    // Cardputer I2C: SDA=2, SCL=1
+    pinMode(2, INPUT_PULLUP); // SDA
+    pinMode(1, OUTPUT);       // SCL
+    
+    // Check if SDA is held low (Stuck Slave)
+    if (digitalRead(2) == LOW) {
+        if (Serial) Serial.println("[I2C] SDA Stuck LOW! Attempting recovery...");
+        for (int i = 0; i < 9; i++) {
+            digitalWrite(1, HIGH);
+            delayMicroseconds(10);
+            digitalWrite(1, LOW);
+            delayMicroseconds(10);
+        }
+        // Generate Stop condition
+        digitalWrite(1, LOW);
+        delayMicroseconds(10);
+        digitalWrite(2, LOW); // Force SDA Low (output)
+        pinMode(2, OUTPUT);
+        delayMicroseconds(10);
+        digitalWrite(1, HIGH); // SCL High
+        delayMicroseconds(10);
+        digitalWrite(2, HIGH); // SDA High
+        delayMicroseconds(10);
+        
+        pinMode(2, INPUT_PULLUP); // Release SDA
+        if (Serial) Serial.println("[I2C] Recovery Sequence Complete.");
+    }
+}
+
 void setup() {
+    // Recover I2C Bus BEFORE anything else
+    recoverI2C();
+
     // Feed watchdog early
     yield();
 
@@ -81,28 +118,44 @@ void setup() {
     // Feed watchdog after M5.begin
     yield();
 
+    // DIAGNOSTIC:: Check I2C for Keyboard (0x5F)
+    Wire.begin(2, 1); // Ensure Wire is started on correct pins (SDA=G2, SCL=G1)
+    Wire.beginTransmission(0x5F);
+    bool kbFound = (Wire.endTransmission() == 0);
+    
+    if (Serial) {
+        Serial.printf("[SETUP] Keyboard (0x5F): %s\n", kbFound ? "FOUND" : "MISSING");
+        if (!kbFound) {
+            Serial.println("[SETUP] FORCE RESTARTING WIRE...");
+            Wire.end();
+            delay(100);
+            Wire.begin(2, 1);
+            delay(100);
+        }
+    }
+
     // Apply theme
     M5Cardputer.Display.setRotation(1);  // Landscape
     M5Cardputer.Display.fillScreen(Theme::COLOR_BACKGROUND);
     M5Cardputer.Display.setTextColor(Theme::COLOR_TEXT_PRIMARY);
     M5Cardputer.Display.setFont(&fonts::Font0);
 
-    // Show immediate feedback (before heavy init)
-    M5Cardputer.Display.setCursor(10, 60);
-    M5Cardputer.Display.print("Initializing...");
-
-    yield();  // Feed watchdog
-
     // Initialize components (heavy operations)
     g_engine = &VanguardEngine::getInstance();
-
+    
+    // NOTE: We do NOT call g_engine->init() here anymore. 
+    // It is called in the INITIALIZING state loop.
+    
     yield();  // Feed watchdog
-
+    
+    // UI Components
     g_boot = new BootSequence();
+    // DIAGNOSTIC REMOVED: Silent recovery only.
     g_scanSelector = new ScanSelector();
     g_radar = new TargetRadar(*g_engine);
     g_menu = new MainMenu();
     g_settings = new SettingsPanel();
+
     g_about = new AboutPanel();
 
     FeedbackManager::getInstance().init();
@@ -110,8 +163,7 @@ void setup() {
 
 
     // Start boot sequence
-    g_boot->begin();
-    setAppState(AppState::BOOTING);
+    // g_boot->begin(); // MOVED to AppState::INITIALIZING
 
     // Safe serial print (only if CDC is connected)
     if (Serial) {
@@ -126,17 +178,6 @@ void setup() {
 void loop() {
     M5Cardputer.update();  // Read keyboard and buttons
     
-    // Diagnostic Heartbeat
-    static uint32_t lastHeartbeat = 0;
-    if (millis() - lastHeartbeat > 2000) {
-        if (Serial) {
-            int bootPhase = (g_boot) ? (int)g_boot->getPhase() : -1;
-            Serial.printf("[HEARTBEAT] State: %d, BootPhase: %d, KeyPressed: %d, KeyChange: %d\n", 
-                (int)g_state, bootPhase, M5Cardputer.Keyboard.isPressed(), M5Cardputer.Keyboard.isChange());
-        }
-        lastHeartbeat = millis();
-    }
-
     // Handle keyboard input globally
     handleKeyboardInput();
 
@@ -181,6 +222,19 @@ void loop() {
     }
 
     switch (g_state) {
+        case AppState::INITIALIZING:
+            // LAZY INIT: Initialize Engine here, inside the loop
+            // LAZY INIT: Initialize Engine here, inside the loop
+            if (g_engine) {
+                g_engine->init(); 
+            }
+            // Sync animation start TO NOW
+            if (g_boot) {
+                g_boot->begin();
+            }
+            setAppState(AppState::BOOTING);
+            break;
+
         case AppState::BOOTING: {
             g_boot->tick();
             
@@ -349,6 +403,11 @@ void loop() {
             break;
     }
 
+    if (g_state != AppState::BOOTING && g_state != AppState::INITIALIZING) {
+        // Small delay to keep loop from running too hot, but short enough for input
+        delay(10);
+    }
+    
     // Small yield to prevent watchdog
     yield();
 }
@@ -369,20 +428,15 @@ void handleKeyboardInput() {
     bool hasPress = M5Cardputer.Keyboard.isPressed();
     bool hasChange = M5Cardputer.Keyboard.isChange();
 
-    if (!hasPress && !hasChange) {
-        return;  // No input
-    }
+    // Removed !hasPress check - relying on isKeyPressed()
 
     if (Serial) {
         Serial.printf("[INPUT] Key pressed at state %d\n", (int)g_state);
     }
 
     // Debounce - prevent rapid-fire key events
-    uint32_t now = millis();
-    if (now - g_lastKeyMs < KEY_DEBOUNCE_MS) {
-        return;
-    }
-    g_lastKeyMs = now;
+    // Debounce: relying on M5Cardputer library internal state is safer
+    // Removing manual debounce to ensure we don't miss events
 
     // Handle menu input first (if visible)
     if (g_menu && g_menu->isVisible()) {

@@ -45,24 +45,3 @@ jobs:
         with:
           name: firmware_bin
           path: .pio/build/m5stack-cardputer/firmware.bin
-
-  release-latest:
-    needs: build
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v3
-        with:
-          name: firmware_bin
-          path: artifacts
-
-      - name: Create Rolling Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: rolling-alpha
-          name: "VANGUARD Alpha (Rolling Build)"
-          body: "Automated rolling release for VANGUARD Alpha 1.1. Updated on every commit to main."
-          files: artifacts/firmware.bin
-          prerelease: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

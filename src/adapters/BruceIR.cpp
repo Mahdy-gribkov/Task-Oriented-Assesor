@@ -22,7 +22,7 @@ bool BruceIR::init() {
     // RX pin is defined via IrReceiver.begin(RX_PIN)
     
     IrSender.begin(44);
-    IrReceiver.begin(43, ENABLE_LED_FEEDBACK);
+    // IrReceiver.begin(43, ENABLE_LED_FEEDBACK); // DISABLED: Cardputer has no RX, causes crash
 
     if (Serial) {
         Serial.println("[IR] Initialized (TX:44, RX:43)");
