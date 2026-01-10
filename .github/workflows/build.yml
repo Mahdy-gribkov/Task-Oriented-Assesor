@@ -40,6 +40,9 @@ jobs:
       - name: Build Firmware
         run: pio run
 
+      - name: Run Unit Tests
+        run: pio test -e native
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
