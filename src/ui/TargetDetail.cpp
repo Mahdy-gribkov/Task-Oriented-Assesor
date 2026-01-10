@@ -15,6 +15,8 @@ TargetDetail::TargetDetail(VanguardEngine& engine, const Target& target)
     , m_target(target)
     , m_state(DetailViewState::INFO)
     , m_actionIndex(0)
+    , m_selectedClientIndex(-1)
+    , m_hasSelectedClient(false)
     , m_wantsBack(false)
     , m_actionConfirmed(false)
     , m_confirmedAction(ActionType::NONE)
@@ -120,16 +122,27 @@ void TargetDetail::clearBackRequest() {
 
 void TargetDetail::navigateUp() {
     if (m_state == DetailViewState::ACTIONS) {
-        if (m_actionIndex > 0) {
-            m_actionIndex--;
+        if (m_actionIndex > 0) m_actionIndex--;
+    } else if (m_state == DetailViewState::CLIENT_SELECT) {
+        if (m_selectedClientIndex > 0) {
+            m_selectedClientIndex--;
+        } else {
+            transitionTo(DetailViewState::INFO);
         }
     }
 }
 
 void TargetDetail::navigateDown() {
     if (m_state == DetailViewState::ACTIONS) {
-        if (m_actionIndex < (int)m_actions.size() - 1) {
-            m_actionIndex++;
+        if (m_actionIndex < (int)m_actions.size() - 1) m_actionIndex++;
+    } else if (m_state == DetailViewState::INFO) {
+        if (m_target.clientCount > 0) {
+            m_selectedClientIndex = 0;
+            transitionTo(DetailViewState::CLIENT_SELECT);
+        }
+    } else if (m_state == DetailViewState::CLIENT_SELECT) {
+        if (m_selectedClientIndex < m_target.clientCount - 1 && m_selectedClientIndex < 2) { // 3 clients max for now
+            m_selectedClientIndex++;
         }
     }
 }
@@ -153,6 +166,11 @@ void TargetDetail::select() {
             }
             break;
 
+        case DetailViewState::CLIENT_SELECT:
+            m_hasSelectedClient = true;
+            transitionTo(DetailViewState::ACTIONS);
+            break;
+
         case DetailViewState::CONFIRM:
             m_confirmedAction = m_actions[m_actionIndex].type;
             m_actionConfirmed = true;
@@ -174,6 +192,10 @@ void TargetDetail::back() {
             break;
 
         case DetailViewState::ACTIONS:
+            transitionTo(DetailViewState::INFO);
+            break;
+
+        case DetailViewState::CLIENT_SELECT:
             transitionTo(DetailViewState::INFO);
             break;
 
@@ -207,6 +229,14 @@ ActionType TargetDetail::getConfirmedAction() const {
 void TargetDetail::clearActionConfirmation() {
     m_actionConfirmed = false;
     transitionTo(DetailViewState::EXECUTING);
+}
+
+void TargetDetail::getConfirmedStationMac(uint8_t* mac) const {
+    if (m_hasSelectedClient && m_selectedClientIndex >= 0 && m_selectedClientIndex < m_target.clientCount) {
+        memcpy(mac, m_target.clientMacs[m_selectedClientIndex], 6);
+    } else {
+        memset(mac, 0, 6);
+    }
 }
 
 void TargetDetail::updateActionProgress(const ActionProgress& progress) {
@@ -335,6 +365,14 @@ void TargetDetail::renderInfo() {
                 snprintf(macStr, sizeof(macStr), " %02X:%02X:%02X:%02X:%02X:%02X",
                          m_target.clientMacs[i][0], m_target.clientMacs[i][1], m_target.clientMacs[i][2],
                          m_target.clientMacs[i][3], m_target.clientMacs[i][4], m_target.clientMacs[i][5]);
+                
+                if (m_state == DetailViewState::CLIENT_SELECT && i == m_selectedClientIndex) {
+                    m_canvas->setTextColor(Theme::COLOR_ACCENT);
+                    m_canvas->fillRect(68, y-1, Theme::SCREEN_WIDTH - 76, 11, Theme::COLOR_SURFACE_RAISED);
+                } else {
+                    m_canvas->setTextColor(Theme::COLOR_TEXT_PRIMARY);
+                }
+                
                 m_canvas->drawString(macStr, 70, y);
                 y += 10;
             }
@@ -415,7 +453,7 @@ void TargetDetail::renderActions() {
     if (m_actions.size() > 4) {
         m_canvas->setTextColor(Theme::COLOR_TEXT_MUTED);
         m_canvas->setTextDatum(BR_DATUM);
-        char scrollStr[16];
+        char scrollStr[32];
         snprintf(scrollStr, sizeof(scrollStr), "%d/%d", m_actionIndex + 1, (int)m_actions.size());
         m_canvas->drawString(scrollStr, Theme::SCREEN_WIDTH - 8, Theme::SCREEN_HEIGHT - 12);
     }
@@ -572,6 +610,14 @@ void TargetDetail::handleInput() {
 // =============================================================================
 
 void TargetDetail::transitionTo(DetailViewState newState) {
+    if (m_state == newState) return;
+    
+    // Cleanup/Reset on entry to certain states
+    if (newState == DetailViewState::INFO) {
+        m_selectedClientIndex = -1;
+        m_hasSelectedClient = false;
+    }
+    
     m_state = newState;
 }
 

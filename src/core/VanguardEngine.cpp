@@ -584,7 +584,7 @@ std::vector<AvailableAction> VanguardEngine::getActionsFor(const Target& target)
     return m_actionResolver.getActionsFor(target);
 }
 
-bool VanguardEngine::executeAction(ActionType action, const Target& target) {
+bool VanguardEngine::executeAction(ActionType action, const Target& target, const uint8_t* stationMac) {
     // Reset progress
     m_actionProgress.type = action;
     m_actionProgress.result = ActionResult::IN_PROGRESS;
@@ -606,7 +606,12 @@ bool VanguardEngine::executeAction(ActionType action, const Target& target) {
     ActionRequest* req = new ActionRequest();
     req->type = action;
     req->target = target; // Copy target
-    memset(req->stationMac, 0, 6); // Default to all (or none)
+    
+    if (stationMac) {
+        memcpy(req->stationMac, stationMac, 6);
+    } else {
+        memset(req->stationMac, 0, 6);
+    }
     
     // Send Request
     SystemRequest sysReq;

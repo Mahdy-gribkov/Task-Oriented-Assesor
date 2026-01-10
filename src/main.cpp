@@ -350,8 +350,11 @@ void loop() {
                 // Check if action was confirmed
                 else if (g_detail->actionConfirmed()) {
                     ActionType action = g_detail->getConfirmedAction();
+                    uint8_t stationMac[6];
+                    g_detail->getConfirmedStationMac(stationMac);
                     g_detail->clearActionConfirmation();
-                    g_engine->executeAction(action, g_detail->getTarget());
+                    
+                    g_engine->executeAction(action, g_detail->getTarget(), stationMac);
                     setAppState(AppState::ATTACKING);
                 }
             }

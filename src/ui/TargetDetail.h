@@ -36,6 +36,7 @@ namespace Vanguard {
 enum class DetailViewState : uint8_t {
     INFO,           // Showing target info
     ACTIONS,        // Showing action list
+    CLIENT_SELECT,  // Selecting a specific station/client
     CONFIRM,        // Confirming destructive action
     EXECUTING,      // Action in progress
     RESULT          // Showing action result
@@ -128,6 +129,11 @@ public:
      */
     void showResult(ActionResult result, const char* message);
 
+    /**
+     * @brief Get station MAC for precision attacks
+     */
+    void getConfirmedStationMac(uint8_t* mac) const;
+
     // -------------------------------------------------------------------------
     // State
     // -------------------------------------------------------------------------
@@ -150,6 +156,8 @@ private:
     DetailViewState             m_state;
     std::vector<AvailableAction> m_actions;
     int                         m_actionIndex;
+    int                         m_selectedClientIndex;
+    bool                        m_hasSelectedClient;
     bool                        m_wantsBack;
     bool                        m_actionConfirmed;
     ActionType                  m_confirmedAction;

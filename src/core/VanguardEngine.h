@@ -176,11 +176,11 @@ public:
      * @brief Execute an action on a target
      * Non-blocking. Check getActionProgress() for status.
      *
-     * @param action The action type to perform
      * @param target The target to act upon
+     * @param stationMac Optional specific client MAC to target
      * @return true if action started successfully
      */
-    bool executeAction(ActionType action, const Target& target);
+    bool executeAction(ActionType action, const Target& target, const uint8_t* stationMac = nullptr);
 
     /**
      * @brief Stop any active action
