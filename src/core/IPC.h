@@ -32,7 +32,7 @@ enum class SysCommand : uint8_t {
 struct ActionRequest {
     ActionType type;
     Target target;
-    // Additional parameters can be added here
+    uint8_t stationMac[6]; // For specific client targeting (DEAUTH_SINGLE)
 };
 
 struct SystemRequest {

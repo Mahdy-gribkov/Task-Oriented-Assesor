@@ -605,6 +605,7 @@ bool VanguardEngine::executeAction(ActionType action, const Target& target) {
     ActionRequest* req = new ActionRequest();
     req->type = action;
     req->target = target; // Copy target
+    memset(req->stationMac, 0, 6); // Default to all (or none)
     
     // Send Request
     SystemRequest sysReq;

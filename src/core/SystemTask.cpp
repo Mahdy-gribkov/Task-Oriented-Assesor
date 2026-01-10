@@ -3,6 +3,7 @@
 #include "../adapters/BruceWiFi.h"
 #include "../adapters/BruceBLE.h"
 #include "../adapters/BruceIR.h"
+#include "../adapters/EvilPortal.h"
 
 namespace Vanguard {
 
@@ -227,12 +228,52 @@ void SystemTask::handleActionStart(ActionRequest* req) {
     
     switch (type) {
         case ActionType::DEAUTH_SINGLE:
+             if (wifi.init()) {
+                 // Check if stationMac is valid (not all zeros)
+                 bool specificClient = false;
+                 for (int i=0; i<6; i++) if (req->stationMac[i] != 0) specificClient = true;
+                 
+                 if (specificClient) {
+                     success = wifi.deauthStation(req->stationMac, t.bssid, t.channel);
+                 } else {
+                     // Fallback to all if no client specified
+                     success = wifi.deauthAll(t.bssid, t.channel);
+                 }
+             }
+             break;
+
         case ActionType::DEAUTH_ALL:
              if (wifi.init()) {
                  success = wifi.deauthAll(t.bssid, t.channel);
              }
              break;
-             
+
+        // ... Beacon/BLE existing ...
+
+        case ActionType::CAPTURE_HANDSHAKE:
+             if (wifi.init()) {
+                 // 1. Start Sniffer/PCAP
+                 char filename[64];
+                 snprintf(filename, sizeof(filename), "/captures/hs_%02X%02X%02X.pcap", 
+                          t.bssid[3], t.bssid[4], t.bssid[5]);
+                 wifi.setPcapLogging(true, filename);
+                 
+                 // 2. Start Deauth to force handshake
+                 wifi.deauthAll(t.bssid, t.channel); 
+                 
+                 // 3. Mark success (monitoring will happen in tick)
+                 success = true;
+             }
+             break;
+
+        case ActionType::EVIL_TWIN:
+             {
+                 EvilPortal& portal = EvilPortal::getInstance();
+                 if (portal.isRunning()) portal.stop();
+                 success = portal.start(t.ssid, t.channel, PortalTemplate::GENERIC_WIFI);
+             }
+             break;
+
         case ActionType::BEACON_FLOOD:
              if (wifi.init()) {
                  static const char* fakeSSIDs[] = {
